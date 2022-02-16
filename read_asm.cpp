@@ -3,7 +3,7 @@
 using namespace std;
 
 HANDLE hGameProcess = NULL;
-const int len = 0x700;
+const int len = 0x800;
 BYTE buf[len];
 
 int main() {

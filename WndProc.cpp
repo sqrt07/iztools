@@ -24,7 +24,7 @@ const char* keyPlant = "1";
 
 bool bSpeed = true, bHalfSpeed = false, bNoInject = false;
 bool bRunning = false;
-bool b5Test = false, bDLL = false;
+bool b5Test = false, bDLL = false, bDelayInf = false;
 
 BOOL CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK RowsDlgProc(HWND, UINT, WPARAM, LPARAM);
@@ -67,7 +67,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         for(int i = 0; i < 5; i++)
             hZombieCol[i] = CreateWindow("edit", zombieCols[i], WS_VISIBLE | WS_CHILD | ES_CENTER | WS_TABSTOP | ES_NUMBER, 60 + 40 * i, 80, 36, 22, hZombieBox, NULL, hInst, NULL);
         CreateWindow("static", "测试总数：", WS_VISIBLE | WS_CHILD, 12, 220, 80, 24, hWnd, NULL, hInst, NULL);
-        hCountInput = CreateWindow("edit", "1000", WS_VISIBLE | WS_CHILD | ES_CENTER | ES_NUMBER, 90, 220, 50, 22, hWnd, NULL, hInst, NULL);
+        hCountInput = CreateWindow("edit", "1000", WS_VISIBLE | WS_CHILD | ES_CENTER | ES_NUMBER, 90, 220, 55, 22, hWnd, NULL, hInst, NULL);
         hTextKeyPlant = CreateWindow("static", "目标列：", WS_VISIBLE | WS_CHILD, 170, 220, 70, 24, hWnd, NULL, hInst, NULL);
         hKeyPlantInput = CreateWindow("edit", "1", WS_VISIBLE | WS_CHILD | ES_CENTER | ES_NUMBER, 230, 220, 35, 22, hWnd, NULL, hInst, NULL);
         hTextMjlock = CreateWindow("static", "舞王锁定：", WS_VISIBLE | WS_CHILD, 156, 220, 70, 24, hWnd, NULL, hInst, NULL);
@@ -137,6 +137,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             int flag = bDLL ? MF_UNCHECKED : MF_CHECKED;
             CheckMenuItem(hMenu, IDM_DLL, MF_BYCOMMAND | flag);
             bDLL = !bDLL;
+            break;
+        }
+        case IDM_DELAYINF: {
+            int flag = bDelayInf ? MF_UNCHECKED : MF_CHECKED;
+            CheckMenuItem(hMenu, IDM_DELAYINF, MF_BYCOMMAND | flag);
+            bDelayInf = !bDelayInf;
             break;
         }
         case IDM_NOINJECT: {

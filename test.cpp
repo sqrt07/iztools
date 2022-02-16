@@ -8,7 +8,7 @@ extern HWND hCountInput, hKeyPlantInput;
 extern HWND hPlantType[5], hZombieType[5], hZombieTime[5], hZombieCol[5];
 extern HWND hPlantNo[5];
 
-extern bool bSpeed, bHalfSpeed, bNoInject, b5Test;
+extern bool bSpeed, bHalfSpeed, bNoInject, b5Test, bDelayInf;
 
 DWORD count_max = 1000, key_plant_col = 1;
 BYTE plants_type[5], plants_col[5], zombies_type[5], zombies_col[5];
@@ -128,6 +128,7 @@ void StartTest() {
 
     write_memory<BYTE>(1, 0x700001);   // flag_start
     write_memory<BYTE>(1, 0x700000);   // flag
+    write_memory<BYTE>(bDelayInf ? 1 : 0, 0x700003); // flag_delay_inf
     write_memory<DWORD>(0, 0x70000C);  // result
     write_memory<DWORD>(0, 0x700004);  // cur_count
     // write_memory<DWORD>(0, 0x6ffff8); // total_time

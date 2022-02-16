@@ -1,19 +1,19 @@
 # Project: iztools
 # Makefile created by Dev-C++ 5.11
 
-CPP      = g++.exe -D__DEBUG__
-CC       = gcc.exe -D__DEBUG__
-WINDRES  = windres.exe
+CPP      = D:\MinGW\bin\g++.exe -D__DEBUG__
+CC       = D:\MinGW\bin\gcc.exe -D__DEBUG__
+WINDRES  = D:\MinGW\bin\windres.exe
 RES      = iztools_private.res
 OBJ      = WinMain.o WndProc.o test.o DlgProc.o string.o rows.o inject.o asm.o 5test.o $(RES)
 LINKOBJ  = WinMain.o WndProc.o test.o DlgProc.o string.o rows.o inject.o asm.o 5test.o $(RES)
-LIBS     = -L"D:\MinGW\lib32" -L"D:\MinGW\x86_64-w64-mingw32\lib32" -mwindows -m32 -g3
+LIBS     = -L"D:\MinGW\lib32" -L"D:\MinGW\x86_64-w64-mingw32\lib32" -mwindows -m32 -g3 -static-libgcc -static-libstdc++
 INCS     = -I"D:\MinGW\include" -I"D:\MinGW\x86_64-w64-mingw32\include" -I"D:\MinGW\lib\gcc\x86_64-w64-mingw32\4.9.2\include"
 CXXINCS  = -I"D:\MinGW\include" -I"D:\MinGW\x86_64-w64-mingw32\include" -I"D:\MinGW\lib\gcc\x86_64-w64-mingw32\4.9.2\include" -I"D:\mingw32\lib\gcc\x86_64-w64-mingw32\4.9.2\include\c++"
 BIN      = iztools.exe
 CXXFLAGS = $(CXXINCS) -g3 -std=c++17
 CFLAGS   = $(INCS) -m32 -g3
-RM       = rm.exe -f
+RM       = D:\MinGW\bin\rm.exe -f
 
 .PHONY: all all-before all-after clean clean-custom
 

@@ -24,6 +24,7 @@
 #define IDM_CHAR			908
 #define IDM_ABOUT			909
 #define IDM_DLL				910
+#define IDM_DELAYINF		911
 
 #define IDR_CODE			1001
 #define IDR_CODE5			1002
