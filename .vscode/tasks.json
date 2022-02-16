@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compile & Run",
+            "type": "shell",
+            "command": ".vscode/task.bat",
+            "problemMatcher": [],
+            "group": "build",
+        },
+        {
+            "label": "Compile",
+            "type": "shell",
+            "command": ".vscode/task3.bat",
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Run",
+            "type": "shell",
+            "command": "${fileDirname}/iztools.exe",
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Compile All",
+            "type": "shell",
+            "command": ".vscode/taskall.bat",
+            "problemMatcher": [],
+            "group": "build"
+        },
+    ]
+}
