@@ -48,5 +48,5 @@ void INJECTOR::clear_bullets() {
 }
 void INJECTOR::write(void* addr) {
     ret();
-    WriteProcessMemory(hGameProcess, addr, code, pos, NULL);
+    WriteProcessMemory(hGameProcess, addr, &*code.begin(), code.size(), NULL);
 }

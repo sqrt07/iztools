@@ -1,35 +1,41 @@
 #include "iztools.h"
 
 #include <mingw.std.thread.h> // <thread>
+#include <sys/timeb.h>
 
-static bool* running;
 extern int start_time;
 HWND hResText, hTimeText;
-void UpdateResult(HWND hDlg, int sec) {
-    int res, cnt, flg, time;
-    char s[32];
+bool UpdateResult(HWND hDlg, int sec) {
+    bool update = sec % 10 == 0;
+    sec /= 10;
+    bool running = true;
+    int res, cnt, flg, tm;
+    char s[1024];
     res = read_memory<int>(0x70000c);
     cnt = read_memory<int>(0x700004);
     flg = read_memory<bool>(0x700000);
     sprintf(s, "%d / %d", res, cnt);
     if(cnt) sprintf(s, "%s [%.2lf%%]", s, 100.0f * res / cnt);
-    SetWindowText(hResText, s);
     if(!flg) {
+        SetWindowText(hResText, s);
         sprintf(s, "Done. (%ds)", sec);
         SetWindowText(hDlg, s);
         EndTest();
-        *running = false;
         MessageBeep(0);
-    } else {
+        tm = read_memory<DWORD>(0x6ffff8);
+        sprintf(s, "平均速度：%.2lf", (tm - start_time) / (double)(sec * 100));
+        SetWindowText(hTimeText, s);
+    } else if(update) {
+        SetWindowText(hResText, s);
         sprintf(s, "Running... (%ds)", sec);
         SetWindowText(hDlg, s);
+        if(sec > 0) {
+            tm = read_memory<DWORD>(0x6a9ec0, 0x768, 0x5568);
+            sprintf(s, "平均速度：%.2lf", (tm - start_time) / (double)(sec * 100));
+            SetWindowText(hTimeText, s);
+        }
     }
-    if(sec > 0) {
-        if(*running) time = read_memory<DWORD>(0x6a9ec0, 0x768, 0x5568);
-        else time = read_memory<DWORD>(0x6ffff8);
-        sprintf(s, "平均速度：%.2lf", (time - start_time) / (double)(sec * 100));
-        SetWindowText(hTimeText, s);
-    }
+    return flg;
 }
 BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
@@ -40,24 +46,24 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
         hTimeText = CreateWindow("edit", "", WS_VISIBLE | WS_CHILD | ES_READONLY, 10, 60, 200, 20, hDlg, NULL, hInst, NULL);
         hFont = CreateFont(20, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 32, "Microsoft YaHei");
         EnumChildWindows(hDlg, SetChildWndFont, (LPARAM)hFont);
+        timeb tb;
+        ftime(&tb);
+        static long long t = 0;
         {
-            bool* b = new bool(true);
-            running = b;
-            std::thread([hDlg, b] {
-                int sec = 0;
-                while(*b) {
-                    UpdateResult(hDlg, sec++);
-                    Sleep(1000);
-                }
-                delete b;
-            }).detach();
+            long long tnow = tb.time * 1000ll + tb.millitm;
+            if(tnow - t < 120) Sleep(120 - (tnow - t));
+            t = tnow;
         }
+        std::thread([hDlg] {
+            int sec = 0;
+            while(UpdateResult(hDlg, sec++))
+                Sleep(100);
+        }).detach();
         break;
     case WM_COMMAND:
         switch(LOWORD(wParam)) {
         case IDCANCEL:
             EndTest();
-            *running = false;
             EndDialog(hDlg, LOWORD(wParam));
             break;
         case ID_CPYRES: {

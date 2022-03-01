@@ -37,28 +37,22 @@ class GAMEPTR {
 
 class COMPARE;
 class INJECTOR {
-    BYTE code[0x400];
-    int pos;
+    std::vector<BYTE> code;
 
    public:
-    INJECTOR() : pos(0) {}
-    int len() const { return pos; }
-    void clear() { pos = 0; }
-    void add_byte(BYTE c) {
-        code[pos] = c;
-        pos += 1;
-    }
+    int len() const { return code.size(); }
+    void clear() { code.clear(); }
+    void add_byte(BYTE c) { code.push_back(c); }
     void add_word(WORD c) {
-        (WORD&)code[pos] = c;
-        pos += 2;
+        add_byte(c);
+        add_byte(c >> 8);
     }
     void add_dword(DWORD c) {
-        (DWORD&)code[pos] = c;
-        pos += 4;
+        add_word(c);
+        add_word(c >> 16);
     }
     void add(const INJECTOR& Asm) {
-        memcpy(code + pos, Asm.code, Asm.pos);
-        pos += Asm.pos;
+        code.insert(code.end(), Asm.code.begin(), Asm.code.end());
     }
     void write(void* addr = (void*)0x651090);
     INJECTOR& ret() {
@@ -155,7 +149,7 @@ class INJECTOR {
         return *this;
     }
     INJECTOR& if_jmp(CONDJMP code, const INJECTOR& Asm) {
-        cond_jmp(code, Asm.pos);
+        cond_jmp(code, Asm.len());
         add(Asm);
         return *this;
     }
@@ -178,6 +172,7 @@ class INJECTOR {
         return push(col).push(row).push(type).call(0x6510b3);
     }
 
+    // 下面这些函数是给“调整行”准备的，请不要使用
     void put_plant(int row, int col, int type);
     void del_plant(int i);
     void del_zombie(int i);
