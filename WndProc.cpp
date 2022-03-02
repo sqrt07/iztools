@@ -24,7 +24,7 @@ const char* keyPlant = "1";
 
 bool bSpeed = true, bHalfSpeed = false, bNoInject = false;
 bool bRunning = false;
-bool b5Test = false, bDLL = false, bDelayInf = false;
+bool b5Test = false, bDLL = false, bDelayInf = false, bVBECard = false;
 
 BOOL CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK RowsDlgProc(HWND, UINT, WPARAM, LPARAM);
@@ -149,6 +149,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             int flag = bNoInject ? MF_UNCHECKED : MF_CHECKED;
             CheckMenuItem(hMenu, IDM_NOINJECT, MF_BYCOMMAND | flag);
             bNoInject = !bNoInject;
+            break;
+        }
+        case IDM_CARD: {
+            if(!Prepare(hWnd)) break;
+            int flag = bVBECard ? MF_UNCHECKED : MF_CHECKED;
+            CheckMenuItem(hMenu, IDM_CARD, MF_BYCOMMAND | flag);
+            bVBECard = !bVBECard;
+            write_memory<DWORD>(bVBECard ? 0x90909090 : 0x01544583, 0x430dce);
             break;
         }
         case IDM_HELP:
