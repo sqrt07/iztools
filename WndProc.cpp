@@ -28,8 +28,9 @@ bool b5Test = false, bDLL = false, bDelayInf = false, bVBECard = false;
 
 BOOL CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK RowsDlgProc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK DataDlgProc(HWND, UINT, WPARAM, LPARAM);
 bool ReadEditText();
-bool Prepare(HWND hWnd);
+bool Prepare(HWND hWnd, bool gameui = true);
 void GetString(char*);
 void SetString(const char*);
 bool ReadTestStr(const char*);
@@ -174,6 +175,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         case IDM_ROWS:
             EnableMenuItem(hMenu, IDM_ROWS, MF_BYCOMMAND | MF_DISABLED);
             CreateDialog(hInst, MAKEINTRESOURCE(IDD_ROWS), hWnd, (DLGPROC)RowsDlgProc);
+            break;
+        case IDM_DATA:
+            EnableMenuItem(hMenu, IDM_DATA, MF_BYCOMMAND | MF_DISABLED);
+            CreateDialog(hInst, MAKEINTRESOURCE(IDD_DATA), hWnd, (DLGPROC)DataDlgProc);
             break;
         case ID_5TEST:
             for(HWND h : {hPlantBox, hZombieBox, hTextKeyPlant, hKeyPlantInput, hBtnClear, hBtnDefault})

@@ -5,13 +5,13 @@ CPP      = D:\MinGW\bin\g++.exe -D__DEBUG__
 CC       = D:\MinGW\bin\gcc.exe -D__DEBUG__
 WINDRES  = D:\MinGW\bin\windres.exe
 RES      = iztools_private.res
-OBJ      = WinMain.o WndProc.o test.o DlgProc.o string.o rows.o inject.o asm.o 5test.o $(RES)
-LINKOBJ  = WinMain.o WndProc.o test.o DlgProc.o string.o rows.o inject.o asm.o 5test.o $(RES)
+OBJ      = WinMain.o WndProc.o test.o DlgProc.o string.o rows.o inject.o asm.o 5test.o data.o $(RES)
+LINKOBJ  = WinMain.o WndProc.o test.o DlgProc.o string.o rows.o inject.o asm.o 5test.o data.o $(RES)
 LIBS     = -L"D:\MinGW\lib32" -L"D:\MinGW\x86_64-w64-mingw32\lib32" -mwindows -m32 -g3 -static-libgcc -static-libstdc++
 INCS     = -I"D:\MinGW\include" -I"D:\MinGW\x86_64-w64-mingw32\include" -I"D:\MinGW\lib\gcc\x86_64-w64-mingw32\4.9.2\include"
 CXXINCS  = -I"D:\MinGW\include" -I"D:\MinGW\x86_64-w64-mingw32\include" -I"D:\MinGW\lib\gcc\x86_64-w64-mingw32\4.9.2\include" -I"D:\mingw32\lib\gcc\x86_64-w64-mingw32\4.9.2\include\c++"
 BIN      = iztools.exe
-CXXFLAGS = $(CXXINCS) -g3 -std=c++17
+CXXFLAGS = $(CXXINCS) -g3 -std=c++17 -Wall -Wextra
 CFLAGS   = $(INCS) -m32 -g3
 RM       = D:\MinGW\bin\rm.exe -f
 
@@ -51,6 +51,9 @@ asm.o: asm.cpp
 
 5test.o: 5test.cpp
 	$(CPP) -c 5test.cpp -o 5test.o $(CXXFLAGS)
+
+data.o: data.cpp
+	$(CPP) -c data.cpp -o data.o $(CXXFLAGS)
 
 iztools_private.res: iztools_private.rc resource.rc
 	$(WINDRES) -i iztools_private.rc -F pe-i386 --input-format=rc -o iztools_private.res -O coff 

@@ -36,14 +36,14 @@ void InitTextMap() {
 }
 int FindPlantInMap(std::string s) {
     int t = 0;
-    while((t = s.find(' ')) != std::string::npos)
+    while((t = s.find(' ')) != -1)
         s.erase(t, 1);
     if(m_p.count(s) == 0) return -1;
     return m_p[s];
 }
 int FindZombieInMap(std::string s) {
     int t = 0;
-    while((t = s.find(' ')) != std::string::npos)
+    while((t = s.find(' ')) != -1)
         s.erase(t, t);
     if(m_z.count(s) == 0) return -1;
     return m_z[s];

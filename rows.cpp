@@ -1,6 +1,6 @@
 #include "iztools.h"
 
-bool Prepare(HWND hWnd);
+bool Prepare(HWND hWnd, bool gameui = true);
 void InjectCode(int resID);
 void RunRemoteCode();
 
@@ -48,6 +48,7 @@ void set_rows(const char* s, HWND hDlg) {
 }
 
 BOOL CALLBACK RowsDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
+    UNREFERENCED_PARAMETER(lParam);
     switch(Message) {
     case WM_INITDIALOG: {
         hRowInput = CreateWindow("edit", "54321", WS_VISIBLE | WS_CHILD | ES_NUMBER, 5, 5, 82, 32, hDlg, NULL, hInst, NULL);

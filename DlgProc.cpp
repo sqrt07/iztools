@@ -8,7 +8,6 @@ HWND hResText, hTimeText;
 bool UpdateResult(HWND hDlg, int sec) {
     bool update = sec % 10 == 0;
     sec /= 10;
-    bool running = true;
     int res, cnt, flg, tm;
     char s[1024];
     res = read_memory<int>(0x70000c);

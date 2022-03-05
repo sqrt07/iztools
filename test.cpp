@@ -29,12 +29,12 @@ bool ReadEditText() {
     count_max = GetIntFrom(hCountInput);
     if(count_max <= 0 || count_max % 5 != 0) return false;
     key_plant_col = GetIntFrom(hKeyPlantInput);
-    if(key_plant_col < 0 || key_plant_col > 5) return false;
+    if(key_plant_col > 5) return false;
     for(int i = 0; i < 5; i++) {
         char s[20];
         GetWindowText(hPlantType[i], s, 20);
         std::string str(s);
-        if(count(str.begin(), str.end(), ' ') == str.length()) {
+        if(count(str.begin(), str.end(), ' ') == (int)str.length()) {
             plants_type[i] = 0xff;
             continue;
         }
@@ -47,12 +47,11 @@ bool ReadEditText() {
         if(plants_type[i] != 0xff)
             b = true;
     if(!b) return false;
-    int top = 0;
     for(int i = 0; i < 5; i++) {
         char s[20];
         GetWindowText(hZombieType[i], s, 20);
         std::string str(s);
-        if(count(str.begin(), str.end(), ' ') == str.length()) {
+        if(count(str.begin(), str.end(), ' ') == (int)str.length()) {
             zombies_type[i] = 0;
             continue;
         }
@@ -95,7 +94,7 @@ bool ReadEditText() {
     return true;
 }
 
-bool Prepare(HWND hWnd) {
+bool Prepare(HWND hWnd, bool gameui) {
     hGameWindow = FindWindow("MainWindow", NULL);
     if(hGameWindow == NULL) {
         MessageBox(hWnd, "未找到游戏。", "提示", MB_OK | MB_ICONWARNING);
@@ -104,7 +103,7 @@ bool Prepare(HWND hWnd) {
     DWORD proc_id;
     GetWindowThreadProcessId(hGameWindow, &proc_id);
     hGameProcess = OpenProcess(PROCESS_ALL_ACCESS, false, proc_id);
-    if(read_memory<int>(0x6a9ec0, 0x7fc) != 3) {
+    if(gameui && read_memory<int>(0x6a9ec0, 0x7fc) != 3) {
         MessageBox(hWnd, "当前不在游戏界面。", "提示", MB_OK | MB_ICONWARNING);
         return false;
     }

@@ -30,7 +30,7 @@ bool isInteger(const string& s) {
 }
 POINT read_point(const string& s) {
     int t = s.find('-');
-    if(t == string::npos) return {0, 0};
+    if(t == -1) return {0, 0};
     string s1(s.begin(), s.begin() + t);
     string s2(s.begin() + t + 1, s.end());
     if(!isInteger(s1) || !isInteger(s2))
@@ -49,7 +49,7 @@ bool ReadTestStr(const char* input_str) {
     getline(fin, sZombieTime);
     getline(fin, sZombiePos);
     getline(fin, sMjlock);
-    if(args.Total <= 0 || (args.Mjlock != -1 && args.Mjlock >= 460))
+    if(args.Total <= 0 || (args.Mjlock != (unsigned)-1 && args.Mjlock >= 460))
         return false;
     vector<string> v0, v1[5], v2, v3, v4;
     divide_text(sKeyPos, v0);
@@ -80,8 +80,8 @@ bool ReadTestStr(const char* input_str) {
     if(args.KeyCnt == 0 || args.KeyCnt > 10) return false;
     for(int i = 0; i < args.KeyCnt; i++) {
         POINT p = read_point(v0[i]);
-        if(p.x < 0 || p.y < 0 || p.x > 5 || p.y > 5) return false;
-        if(p.x > 0 && p.y > 0 && args.PlantType[p.x - 1][p.y - 1] == -1) return false;
+        if(p.x <= 0 || p.y < 0 || p.x > 5 || p.y > 5) return false;
+        if(p.y != 0 && args.PlantType[p.x - 1][p.y - 1] == (BYTE)-1) return false;
         args.KeyRow[i] = p.x;
         args.KeyCol[i] = p.y;
     }
@@ -137,7 +137,9 @@ void Start5Test() {
     if(bDLL) {
         HMODULE hDLL = LoadLibrary("script.dll");
         if(hDLL) {
+            #pragma GCC diagnostic ignored "-Wcast-function-type"
             auto Script = (void (*)(INJECTOR&, HANDLE, pfGETINT, pfGETINT))GetProcAddress(hDLL, "CallScript");
+            #pragma GCC diagnostic pop
             if(Script) {
                 INJECTOR Asm2;
                 Asm2.mov(EAX, -1);

@@ -13,6 +13,9 @@
 #define ID_MODIFYROWS		202
 #define ID_REVERSEROWS		203
 #define ID_REVOLVEROWS		204
+#define IDD_DATA			205
+#define ID_CHANGEDATA		206
+#define ID_DEFAULTDATA		207
 
 #define IDM_MENU			901
 #define IDM_SPEED			902
@@ -26,6 +29,7 @@
 #define IDM_DLL				910
 #define IDM_DELAYINF		911
 #define IDM_CARD			912
+#define IDM_DATA			913
 
 #define IDR_CODE			1001
 #define IDR_CODE5			1002
