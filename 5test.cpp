@@ -148,6 +148,7 @@ void Start5Test() {
                 Asm.mov_p(EAX, p_myclock)
                     .cmp(EAX, 0)
                     .if_jmp(jne, Asm2);
+                Asm.prepareForDLL();
 
                 pfGETINT pfPlant = [](const std::string& s){ return m_p[s]; };
                 pfGETINT pfZombie = [](const std::string& s){ return m_z[s]; };

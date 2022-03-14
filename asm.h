@@ -180,6 +180,11 @@ class INJECTOR {
     void clear_plants();
     void clear_zombies();
     void clear_bullets();
+
+    // 下面这些函数是内部使用的
+    void prepareForDLL() {
+        code.reserve(10000);
+    }
 };
 
 class COMPARE {
