@@ -1,13 +1,12 @@
 #include "iztools.h"
 
 #include <mingw.std.thread.h> // <thread>
-#include <sys/timeb.h>
 
 extern int start_time;
 HWND hResText, hTimeText;
-bool UpdateResult(HWND hDlg, int sec) {
-    bool update = sec % 10 == 0;
-    sec /= 10;
+int test_cnt = 0;
+bool UpdateResult(HWND hDlg, int sec, int tcnt) {
+    if(test_cnt - tcnt > 1) return false;
     int res, cnt, flg, tm;
     char s[1024];
     res = read_memory<int>(0x70000c);
@@ -19,12 +18,15 @@ bool UpdateResult(HWND hDlg, int sec) {
         SetWindowText(hResText, s);
         sprintf(s, "Done. (%ds)", sec);
         SetWindowText(hDlg, s);
-        EndTest();
-        MessageBeep(0);
+        if(test_cnt % 2) {
+            MessageBeep(0);
+            ++test_cnt;
+            EndTest();
+        }
         tm = read_memory<DWORD>(0x6ffff8);
         sprintf(s, "平均速度：%.2lf", (tm - start_time) / (double)(sec * 100));
         SetWindowText(hTimeText, s);
-    } else if(update) {
+    } else {
         SetWindowText(hResText, s);
         sprintf(s, "Running... (%ds)", sec);
         SetWindowText(hDlg, s);
@@ -45,25 +47,22 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
         hTimeText = CreateWindow("edit", "", WS_VISIBLE | WS_CHILD | ES_READONLY, 10, 60, 200, 20, hDlg, NULL, hInst, NULL);
         hFont = CreateFont(20, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 32, "Microsoft YaHei");
         EnumChildWindows(hDlg, SetChildWndFont, (LPARAM)hFont);
-        timeb tb;
-        ftime(&tb);
-        static long long t = 0;
-        {
-            long long tnow = tb.time * 1000ll + tb.millitm;
-            if(tnow - t < 120) Sleep(120 - (tnow - t));
-            t = tnow;
-        }
+
+        ++test_cnt;
         std::thread([hDlg] {
-            int sec = 0;
-            while(UpdateResult(hDlg, sec++))
-                Sleep(100);
+            int sec = 0, cnt = test_cnt;
+            while(UpdateResult(hDlg, sec++, cnt))
+                Sleep(1000);
         }).detach();
         break;
     case WM_COMMAND:
         switch(LOWORD(wParam)) {
         case IDCANCEL:
-            EndTest();
             EndDialog(hDlg, LOWORD(wParam));
+            if(test_cnt % 2){
+                ++test_cnt;
+                EndTest();
+            }
             break;
         case ID_CPYRES: {
             char s[32];

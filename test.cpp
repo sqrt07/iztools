@@ -8,7 +8,7 @@ extern HWND hCountInput, hKeyPlantInput;
 extern HWND hPlantType[5], hZombieType[5], hZombieTime[5], hZombieCol[5];
 extern HWND hPlantNo[5];
 
-extern bool bSpeed, bHalfSpeed, bNoInject, b5Test, bDelayInf;
+extern bool bSpeed, bHalfSpeed, bNoInject, b5Test, bDelayInf, bDLL;
 
 DWORD count_max = 1000, key_plant_col = 1;
 BYTE plants_type[5], plants_col[5], zombies_type[5], zombies_col[5];
@@ -176,11 +176,14 @@ void EndTest() {
 
     write_memory<BYTE>(0, 0x700000);  // flag
 
-    if(b5Test) {
+    if(b5Test && bDLL) {
+        MessageBox(0, "!!!", "", 0);
         HMODULE hDLL = LoadLibrary("script.dll");
         if(hDLL) {
-            auto Result = (void (*)())GetProcAddress(hDLL, "Result");
-            if(Result) Result();
+            #pragma GCC diagnostic ignored "-Wcast-function-type"
+            auto Result = (void (*)(HANDLE))GetProcAddress(hDLL, "CallResult");
+            #pragma GCC diagnostic pop
+            if(Result) Result(hGameProcess);
             FreeLibrary(hDLL);
         }
     }
