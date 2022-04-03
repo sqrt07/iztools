@@ -51,10 +51,12 @@ class INJECTOR {
         add_word(c);
         add_word(c >> 16);
     }
+    void add_ptr(void* p) {
+        add_dword((DWORD)p);
+    }
     void add(const INJECTOR& Asm) {
         code.insert(code.end(), Asm.code.begin(), Asm.code.end());
     }
-    void write(void* addr = (void*)0x651090);
     INJECTOR& ret() {
         add_byte(0xc3);
         return *this;
@@ -80,18 +82,37 @@ class INJECTOR {
         add_dword(c);
         return *this;
     }
-    INJECTOR& mov_p(REG r, DWORD* p) {  // mov r, dword ptr[p]
+    INJECTOR& mov(REG r, DWORD* p) {  // mov r, dword ptr[p]
         BYTE t[] = {0xa1, 0x1d, 0x0d, 0x15, 0x35, 0x3d};
         if(!(r == EAX)) add_byte(0x8b);
         add_byte(t[r]);
-        add_dword((DWORD)p);
+        add_ptr(p);
         return *this;
     }
-    INJECTOR& mov_p_r(DWORD* p, REG r) {  // mov dword ptr[p], r
+    INJECTOR& mov(DWORD* p, REG r) {  // mov dword ptr[p], r
         BYTE t[] = {0xa3, 0x1d, 0x0d, 0x15, 0x35, 0x3d};
         if(!(r == EAX)) add_byte(0x89);
         add_byte(t[r]);
-        add_dword((DWORD)p);
+        add_ptr(p);
+        return *this;
+    }
+    INJECTOR& mov(DWORD* p, DWORD c) {  // mov dword ptr[p], c
+        add_word(0x05c7);
+        add_ptr(p);
+        add_dword(c);
+        return *this;
+    }
+    INJECTOR& mov(WORD* p, WORD c) {  // mov word ptr[p], c
+        add_byte(0x66);
+        add_word(0x05c7);
+        add_ptr(p);
+        add_word(c);
+        return *this;
+    }
+    INJECTOR& mov(BYTE* p, BYTE c) {  // mov byte ptr[p], c
+        add_word(0x05c6);
+        add_ptr(p);
+        add_byte(c);
         return *this;
     }
     INJECTOR& add(REG r, DWORD c) {  // add r, c
@@ -108,23 +129,46 @@ class INJECTOR {
         add_dword(c);
         return *this;
     }
-    INJECTOR& cmp_p(REG r, DWORD* p) {  // cmp r, dword ptr[p]
+    INJECTOR& cmp(REG r, DWORD* p) {  // cmp r, dword ptr[p]
         BYTE t[] = {0x05, 0x1d, 0x0d, 0x15, 0x35, 0x3d};
         add_byte(0x3b);
         add_byte(t[r]);
-        add_dword((DWORD)p);
+        add_ptr(p);
         return *this;
     }
-    INJECTOR& cmp_p_c(DWORD* p, DWORD c) {  // cmp dword ptr[p], c
+    INJECTOR& cmp(DWORD* p, DWORD c) {  // cmp dword ptr[p], c
         add_word(0x3d81);
-        add_dword((DWORD)p);
+        add_ptr(p);
         add_dword(c);
         return *this;
     }
-    INJECTOR& cmp_p_c(BYTE* p, BYTE c) {  // cmp byte ptr[p], c
+    INJECTOR& cmp(WORD* p, WORD c) {  // cmp word ptr[p], c
+        add_byte(0x66);
+        add_word(0x3d81);
+        add_ptr(p);
+        add_word(c);
+        return *this;
+    }
+    INJECTOR& cmp(BYTE* p, BYTE c) {  // cmp byte ptr[p], c
         add_word(0x3d80);
-        add_dword((DWORD)p);
+        add_ptr(p);
         add_byte(c);
+        return *this;
+    }
+    INJECTOR& repe() { add_byte(0xf3); return *this; }
+    INJECTOR& stosd() { add_byte(0xab); return *this; }
+    INJECTOR& quit() {
+        mov(EAX, (DWORD*)0x700004);
+        add(EAX, 1);
+        mov((DWORD*)0x6ffff4, EAX);
+        return *this;
+    }
+    INJECTOR& win() {
+        mov((BYTE*)0x700002, 2);
+        return *this;
+    }
+    INJECTOR& lose() {
+        mov((BYTE*)0x700002, 1);
         return *this;
     }
     INJECTOR& cond_jmp(CONDJMP code, DWORD addr) {
@@ -182,6 +226,7 @@ class INJECTOR {
     void clear_bullets();
 
     // 下面这些函数是内部使用的
+    void write(void* addr = (void*)0x651090);
     void prepareForDLL() {
         code.reserve(10000);
     }
@@ -194,12 +239,12 @@ class COMPARE {
    public:
     // ptr指向的数据与c比较
     COMPARE(DWORD* ptr, CONDJMP cond, DWORD c) {
-        vec.push_back({INJECTOR().cmp_p_c(ptr, c), cond});
+        vec.push_back({INJECTOR().cmp(ptr, c), cond});
     }
 
     // ptr指向的数据与c比较
     COMPARE(BYTE* ptr, CONDJMP cond, BYTE c) {
-        vec.push_back({INJECTOR().cmp_p_c(ptr, c), cond});
+        vec.push_back({INJECTOR().cmp(ptr, c), cond});
     }
 
     // 永远为真
@@ -228,11 +273,11 @@ static DWORD* data_pos;
 inline INJECTOR& INJECTOR::event1(const COMPARE& cond, int delay, const INJECTOR& Asm) {
     COMPARE comp = COMPARE(data_pos, EQUAL, -1) && cond;
     add(comp.if_jmp(INJECTOR()
-                        .mov_p(EAX, p_myclock)
+                        .mov(EAX, p_myclock)
                         .add(EAX, delay)
-                        .mov_p_r(data_pos, EAX)));
-    mov_p(EAX, data_pos);
-    cmp_p(EAX, p_myclock);
+                        .mov(data_pos, EAX)));
+    mov(EAX, data_pos);
+    cmp(EAX, p_myclock);
     if_jmp(jne, Asm);
     data_pos++;
     return *this;
@@ -241,14 +286,14 @@ inline INJECTOR& INJECTOR::event2(const COMPARE& cond, int delay, const INJECTOR
                                   const COMPARE& cond2 = COMPARE()) {
     COMPARE comp = COMPARE(data_pos, NEQUAL, -2) && cond;
     add(comp.if_jmp(INJECTOR()
-                        .mov_p(EAX, p_myclock)
+                        .mov(EAX, p_myclock)
                         .add(EAX, delay)
-                        .mov_p_r(data_pos, EAX)));
-    mov_p(EAX, data_pos);
-    cmp_p(EAX, p_myclock);
+                        .mov(data_pos, EAX)));
+    mov(EAX, data_pos);
+    cmp(EAX, p_myclock);
     if_jmp(jne, cond2.if_jmp(INJECTOR(Asm)
                                  .mov(EAX, -2)
-                                 .mov_p_r(data_pos, EAX)));
+                                 .mov(data_pos, EAX)));
     data_pos++;
     return *this;
 }

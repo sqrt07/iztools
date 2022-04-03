@@ -8,6 +8,8 @@
 #define IDD_DIALOG			101
 #define IDD_5TEST			102
 #define ID_CPYRES			103
+#define ID_SETWIN			104
+#define ID_SETLOSE			105
 
 #define IDD_ROWS			201
 #define ID_MODIFYROWS		202

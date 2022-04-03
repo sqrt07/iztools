@@ -125,7 +125,7 @@ bool ReadTestStr(const char* input_str) {
 
 void Start5Test() {
     INJECTOR Asm;
-    Asm.mov_p(EAX, p_myclock);
+    Asm.mov(EAX, p_myclock);
     for(int i = 0; i < args.ZombieCnt; i++) {
         Asm.cmp(EAX, args.ZombieTime[i])
             .if_jmp(jne, INJECTOR()
@@ -141,13 +141,13 @@ void Start5Test() {
             auto Script = (void (*)(INJECTOR&, HANDLE, pfGETINT, pfGETINT))GetProcAddress(hDLL, "CallScript");
             #pragma GCC diagnostic pop
             if(Script) {
-                INJECTOR Asm2;
-                Asm2.mov(EAX, -1);
-                for(DWORD* p = (DWORD*)0x700100; p < (DWORD*)0x700128; p++)
-                    Asm2.mov_p_r(p, EAX);
-                Asm.mov_p(EAX, p_myclock)
-                    .cmp(EAX, 0)
-                    .if_jmp(jne, Asm2);
+                Asm.mov(EAX, p_myclock)
+                    .cmp(EAX, 0ul)
+                    .if_jmp(jne, INJECTOR().mov(ECX, 10)
+                                           .mov(EAX, -1)
+                                           .mov(EDI, 0x700100)
+                                           .repe().stosd()
+                );
                 Asm.prepareForDLL();
 
                 pfGETINT pfPlant = [](const std::string& s){ return m_p[s]; };
@@ -176,6 +176,7 @@ void Start5Test() {
 
     write_memory<BYTE>(1, 0x700001);            // flag_start
     write_memory<BYTE>(1, 0x700000);            // flag
+    write_memory<BYTE>(0, 0x700002);            // flag_state
     write_memory<DWORD>(0, 0x70000C);           // result
     write_memory<DWORD>(0, 0x700004);           // cur_count
     write_memory<DWORD>(args.Total, 0x6ffff4);  // count_max

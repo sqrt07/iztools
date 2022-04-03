@@ -6,15 +6,15 @@
 // Asm中的代码将在每帧种植植物和放置卡片后、判定结果前执行
 void Script(INJECTOR& Asm) {
     // 【示例1】dstss 小鬼卡大喷相位
-    Asm.event1(COMPARE((DWORD*)(gp.get_plant(3) + 0x40), BELOW, 200) // 伞叶血量低于200
-            && COMPARE((DWORD*)(gp.get_plant(0) + 0x90), EQUAL, 10), // 大喷攻击倒计时为9
-               0,
-               INJECTOR().use_card(3, 6, Zombie("xg"))); // 放卡片
+    // Asm.event1(COMPARE((DWORD*)(gp.get_plant(3) + 0x40), BELOW, 200) // 伞叶血量低于200
+    //         && COMPARE((DWORD*)(gp.get_plant(0) + 0x90), EQUAL, 10), // 大喷攻击倒计时为9
+    //            0,
+    //            INJECTOR().use_card(3, 6, Zombie("xg"))); // 放卡片
 
     // 【示例2】tl1bw 撑杆卡冰豆相位
     // Asm.event2(COMPARE((DWORD*)(gp.get_plant(4) + 0x90), EQUAL, 2),
     //            152 - 34,
-    //            INJECTOR().use_card(3, 6, m_z["cg"]),
+    //            INJECTOR().use_card(3, 6, Zombie("cg")),
     //            COMPARE((DWORD*)(gp.get_plant(4) + 0x90), BELOW, 2)
     //         && COMPARE((BYTE*)(gp.get_zombie(0) + 0xba), EQUAL, 0)
     // );
@@ -22,10 +22,19 @@ void Script(INJECTOR& Asm) {
     // 【示例3】pddcp 撑杆卡后大喷相位
     // Asm.event2(COMPARE((DWORD*)(gp.get_plant(1) + 0x90), EQUAL, 1),
     //            150 - 49,
-    //            INJECTOR().use_card(3, 6, m_z["cg"]),
+    //            INJECTOR().use_card(3, 6, Zombie("cg")),
     //            COMPARE((DWORD*)(gp.get_plant(1) + 0x90), BELOW, 2)
     //         && COMPARE((DWORD*)(gp.get_zombie(0) + 0x28), EQUAL, 1)
     // );
+
+    // 【示例4】bphlp 矿杆前后配合
+    Asm.event1(COMPARE((DWORD*)(gp.get_plant(0) + 0x40), BELOW, 220),
+               0, INJECTOR().use_card(3, 6, Zombie("cg"))
+    );
+    Asm.event1(COMPARE(gp.zombie_cnt, EQUAL, 2)
+            && COMPARE((DWORD*)(gp.get_zombie(1) + 0xac), NEQUAL, 0), // 减速倒计时
+               0, INJECTOR().lose().quit()
+    ); // 撑杆被减速就退出
 }
 
 // Result函数在测试结束时执行一次

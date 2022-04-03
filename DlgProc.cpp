@@ -3,6 +3,7 @@
 #include <mingw.std.thread.h> // <thread>
 
 extern int start_time;
+extern bool b5Test;
 HWND hResText, hTimeText;
 int test_cnt = 0;
 bool UpdateResult(HWND hDlg, int sec, int tcnt) {
@@ -44,6 +45,10 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
     case WM_INITDIALOG:
         hResText = CreateWindow("edit", "0 / 0", WS_VISIBLE | WS_CHILD | ES_READONLY, 10, 5, 200, 20, hDlg, NULL, hInst, NULL);
         CreateWindow("button", "复制", WS_VISIBLE | WS_CHILD, 10, 30, 50, 25, hDlg, (HMENU)ID_CPYRES, hInst, NULL);
+        if(b5Test) {
+            CreateWindow("button", "直接成功", WS_VISIBLE | WS_CHILD, 10, 85, 80, 25, hDlg, (HMENU)ID_SETWIN, hInst, NULL);
+            CreateWindow("button", "直接失败", WS_VISIBLE | WS_CHILD, 95, 85, 80, 25, hDlg, (HMENU)ID_SETLOSE, hInst, NULL);
+        }
         hTimeText = CreateWindow("edit", "", WS_VISIBLE | WS_CHILD | ES_READONLY, 10, 60, 200, 20, hDlg, NULL, hInst, NULL);
         hFont = CreateFont(20, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 32, "Microsoft YaHei");
         EnumChildWindows(hDlg, SetChildWndFont, (LPARAM)hFont);
@@ -78,6 +83,12 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
             CloseClipboard();
             break;
         }
+        case ID_SETWIN:
+            write_memory<BYTE>(2, 0x700002);
+            break;
+        case ID_SETLOSE:
+            write_memory<BYTE>(1, 0x700002);
+            break;
         }
         break;
     default:
