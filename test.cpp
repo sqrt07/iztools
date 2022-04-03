@@ -177,7 +177,6 @@ void EndTest() {
     write_memory<BYTE>(0, 0x700000);  // flag
 
     if(b5Test && bDLL) {
-        MessageBox(0, "!!!", "", 0);
         HMODULE hDLL = LoadLibrary("script.dll");
         if(hDLL) {
             #pragma GCC diagnostic ignored "-Wcast-function-type"
