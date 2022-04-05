@@ -9,35 +9,22 @@ static_assert(sizeof(void*) == 4, "请使用32位编译");
 typedef int (*pfGETINT)(const std::string&);
 
 enum REG { EAX, EBX, ECX, EDX, ESI, EDI };
-enum CONDJMP : BYTE { jae = 3, je = 4, jne = 5, jbe = 6,
-                      BELOW = 3, NEQUAL = 4, EQUAL = 5, ABOVE = 6 };
+enum CONDJMP : BYTE { jb  = 2, NBELOW = 2,
+                      jnb = 3,  BELOW = 3,
+                      je  = 4, NEQUAL = 4,
+                      jne = 5,  EQUAL = 5,
+                      jna = 6,  ABOVE = 6,
+                      ja  = 7, NABOVE = 7 };
 
-class GAMEPTR {
-   public:
-    int base, obj, plant, zombie, bullet, prog, clock;
-    DWORD* plant_cnt;
-    DWORD* zombie_cnt;
-    void init() {
-        base = read_memory<DWORD>(0x6a9ec0);
-        obj = read_memory<DWORD>(base + 0x768);
-        plant = read_memory<DWORD>(obj + 0xac);
-        zombie = read_memory<DWORD>(obj + 0x90);
-        bullet = read_memory<DWORD>(obj + 0xc8);
-        prog = read_memory<DWORD>(obj + 0x160);
-        clock = obj + 0x5568;
-        plant_cnt = (DWORD*)(obj + 0xbc);
-        zombie_cnt = (DWORD*)(obj + 0xa0);
-    }
-    int get_plant(int idx) const { return plant + 0x14c * idx; }
-    int get_zombie(int idx) const { return zombie + 0x15c * idx; }
-};
 
-#define p_data (DWORD*)0x700100
-#define p_myclock (DWORD*)0x700010
+inline DWORD* const p_data = (DWORD*)0x700100;
+inline DWORD* const p_myclock = (DWORD*)0x700010;
+inline DWORD* const p_mydata = (DWORD*)0x700900;
 
 class COMPARE;
 class INJECTOR {
     std::vector<BYTE> code;
+    inline static const BYTE treg[] = {0, 3, 1, 2, 6, 7};
 
    public:
     int len() const { return code.size(); }
@@ -67,8 +54,7 @@ class INJECTOR {
         return *this;
     }
     INJECTOR& push(REG r) {
-        BYTE t[] = {0x50, 0x53, 0x51, 0x52, 0x56, 0x57};
-        add_byte(t[r]);
+        add_byte(0x50 + treg[r]);
         return *this;
     }
     INJECTOR& call(DWORD c) {
@@ -76,23 +62,31 @@ class INJECTOR {
         add_word(0xd7ff);  // call edi
         return *this;
     }
+    INJECTOR& mov(REG r, REG r2) {  // mov r, r2
+        add_byte(0x8b);
+        add_byte(0xc0 + treg[r] * 8 + treg[r2]);
+        return *this;
+    }
     INJECTOR& mov(REG r, DWORD c) {  // mov r, c
-        BYTE t[] = {0xb8, 0xbb, 0xb9, 0xba, 0xbe, 0xbf};
-        add_byte(t[r]);
+        add_byte(0xb8 + treg[r]);
         add_dword(c);
         return *this;
     }
     INJECTOR& mov(REG r, DWORD* p) {  // mov r, dword ptr[p]
-        BYTE t[] = {0xa1, 0x1d, 0x0d, 0x15, 0x35, 0x3d};
-        if(!(r == EAX)) add_byte(0x8b);
-        add_byte(t[r]);
+        if(r == EAX) add_byte(0xa1);
+        else {
+            add_byte(0x8b);
+            add_byte(0x05 + treg[r] * 8);
+        }
         add_ptr(p);
         return *this;
     }
     INJECTOR& mov(DWORD* p, REG r) {  // mov dword ptr[p], r
-        BYTE t[] = {0xa3, 0x1d, 0x0d, 0x15, 0x35, 0x3d};
-        if(!(r == EAX)) add_byte(0x89);
-        add_byte(t[r]);
+        if(r == EAX) add_byte(0xa3);
+        else {
+            add_byte(0x89);
+            add_byte(0x05 + treg[r] * 8);
+        }
         add_ptr(p);
         return *this;
     }
@@ -115,24 +109,46 @@ class INJECTOR {
         add_byte(c);
         return *this;
     }
+    INJECTOR& add(REG r, REG r2) {  // add r, r2
+        add_byte(0x01);
+        add_byte(0xc0 + treg[r2] * 8 + treg[r]);
+        return *this;
+    }
     INJECTOR& add(REG r, DWORD c) {  // add r, c
-        BYTE t[] = {0x05, 0xc3, 0xc1, 0xc2, 0xc6, 0xc7};
-        if(!(r == EAX)) add_byte(0x81);
-        add_byte(t[r]);
+        if(r == EAX) add_byte(0x05);
+        else {
+            add_byte(0x81);
+            add_byte(0xc0 + treg[r]);
+        }
         add_dword(c);
         return *this;
     }
+    INJECTOR& sub(REG r, DWORD c) {  // sub r, c
+        if(r == EAX) add_byte(0x2d);
+        else {
+            add_byte(0x81);
+            add_byte(0xe8 + treg[r]);
+        }
+        add_dword(c);
+        return *this;
+    }
+    INJECTOR& div(REG r) {  // div r
+        add_byte(0xf7);
+        add_byte(0xf0 + treg[r]);
+        return *this;
+    }
     INJECTOR& cmp(REG r, DWORD c) {  // cmp r, c
-        BYTE t[] = {0x3d, 0xfb, 0xf9, 0xfa, 0xfe, 0xff};
-        if(!(r == EAX)) add_byte(0x81);
-        add_byte(t[r]);
+        if(r == EAX) add_byte(0x3d);
+        else {
+            add_byte(0x81);
+            add_byte(0xf8 + treg[r]);
+        }
         add_dword(c);
         return *this;
     }
     INJECTOR& cmp(REG r, DWORD* p) {  // cmp r, dword ptr[p]
-        BYTE t[] = {0x05, 0x1d, 0x0d, 0x15, 0x35, 0x3d};
         add_byte(0x3b);
-        add_byte(t[r]);
+        add_byte(0x05 + treg[r] * 8);
         add_ptr(p);
         return *this;
     }
@@ -211,7 +227,7 @@ class INJECTOR {
     // cond2: 二次判断的条件（可省略）：执行代码时检查是否满足条件，若不满足则取消执行，重新等待
     INJECTOR& event2(const COMPARE& cond, int delay, const INJECTOR& Asm, const COMPARE& cond2);
 
-    // row和col从1开始；type参见m_z
+    // row和col从1开始；type使用Zombie("xx")
     INJECTOR& use_card(int row, int col, int type) {
         return push(col).push(row).push(type).call(0x6510b3);
     }
@@ -241,10 +257,16 @@ class COMPARE {
     COMPARE(DWORD* ptr, CONDJMP cond, DWORD c) {
         vec.push_back({INJECTOR().cmp(ptr, c), cond});
     }
-
-    // ptr指向的数据与c比较
+    COMPARE(WORD* ptr, CONDJMP cond, WORD c) {
+        vec.push_back({INJECTOR().cmp(ptr, c), cond});
+    }
     COMPARE(BYTE* ptr, CONDJMP cond, BYTE c) {
         vec.push_back({INJECTOR().cmp(ptr, c), cond});
+    }
+
+    // ptr指向的数据ptr2指向的数据比较
+    COMPARE(DWORD* ptr, CONDJMP cond, DWORD* ptr2) {
+        vec.push_back({INJECTOR().mov(EAX, ptr).cmp(EAX, ptr2), cond});
     }
 
     // 永远为真
@@ -266,6 +288,101 @@ class COMPARE {
         return Asm2;
     }
 };
+
+template<typename T>
+class POINTER {
+    T* ptr;
+   public:
+    POINTER(T* ptr) : ptr(ptr) {}
+    T* p() const { return ptr; }
+    T read() const { return read_memory(ptr); }
+    void write(T x) const { return write_memory(x, ptr); }
+    POINTER<T> operator+(int x) const { return ptr + x; }
+    POINTER<T> operator-(int x) const { return ptr - x; }
+    POINTER<T> operator-(POINTER<T> p2) const { return ptr - p2.ptr; }
+    COMPARE operator==(POINTER<T> p2) { return {ptr,  EQUAL, p2.ptr}; }
+    COMPARE operator!=(POINTER<T> p2) { return {ptr, NEQUAL, p2.ptr}; }
+    COMPARE operator< (POINTER<T> p2) { return {ptr,  BELOW, p2.ptr}; }
+    COMPARE operator>=(POINTER<T> p2) { return {ptr, NBELOW, p2.ptr}; }
+    COMPARE operator> (POINTER<T> p2) { return {ptr,  ABOVE, p2.ptr}; }
+    COMPARE operator<=(POINTER<T> p2) { return {ptr, NABOVE, p2.ptr}; }
+    COMPARE operator==(T x) { return {ptr,  EQUAL, x}; }
+    COMPARE operator!=(T x) { return {ptr, NEQUAL, x}; }
+    COMPARE operator< (T x) { return {ptr,  BELOW, x}; }
+    COMPARE operator>=(T x) { return {ptr, NBELOW, x}; }
+    COMPARE operator> (T x) { return {ptr,  ABOVE, x}; }
+    COMPARE operator<=(T x) { return {ptr, NABOVE, x}; }
+};
+
+class GAMEPTR {
+   public:
+    class ITEMBASE {
+        int ptr;
+       public:
+        ITEMBASE(int ptr = 0) : ptr(ptr) {}
+        int p() const { return ptr; }
+        template<typename T = DWORD>
+        T* get(int offset) const { return (T*)(ptr + offset); }
+        DWORD* operator[](int offset) const { return get(offset); }
+    };
+    template<typename ITEM, int size>
+    class ITEMSBASE {
+        int ptr;
+        POINTER<DWORD> pcnt;
+       public:
+        ITEMSBASE(int ptr = 0, int pcnt = 0) : ptr(ptr), pcnt((DWORD*)pcnt) {}
+        int p() const { return ptr; }
+        POINTER<DWORD> cnt() const { return pcnt; }
+        POINTER<DWORD> cnt_max() const { return pcnt - 3; }
+        ITEM operator[](int idx) const { return {ptr + idx * size}; }
+    };
+    struct PLANT : ITEMBASE {
+        using ITEMBASE::ITEMBASE, ITEMBASE::operator[];
+        // 以下函数命名与CVP保持一致
+        POINTER<DWORD> col() const { return get(0x28) + 1; } // 从1开始
+        POINTER<DWORD> hp() const { return get(0x40); }
+        POINTER<DWORD> attackCountdown() const { return get(0x58); }
+        POINTER<DWORD> row() const { return get(0x88) + 1; } // 从1开始
+        POINTER<DWORD> shootCountdown() const { return get(0x90); }
+        POINTER<BYTE> isVanished() const { return get<BYTE>(0x141); }
+    };
+    struct ZOMBIE : ITEMBASE {
+        using ITEMBASE::ITEMBASE, ITEMBASE::operator[];
+        // 以下函数命名与CVP保持一致
+        POINTER<DWORD> state() const { return get(0x28); }
+        POINTER<DWORD> hp() const { return get(0xc8); }
+        POINTER<DWORD> helmetHp() const { return get(0xd0); }
+        POINTER<DWORD> shieldHp() const { return get(0xdc); }
+        POINTER<DWORD> slowCountdown() const { return get(0xac); }
+        POINTER<BYTE> haveHead() const { return get<BYTE>(0xba); }
+    };
+    int base, obj, plant, zombie, bullet, prog;
+    PDWORD clock, mjclock;
+    ITEMSBASE<PLANT, 0x14c> plants;
+    ITEMSBASE<ZOMBIE, 0x15c> zombies;
+    void init() {
+        base = read_memory<int>(0x6a9ec0);
+        obj = read_memory<int>(base + 0x768);
+        plant = read_memory<int>(obj + 0xac);
+        zombie = read_memory<int>(obj + 0x90);
+        bullet = read_memory<int>(obj + 0xc8);
+        prog = read_memory<int>(obj + 0x160);
+        clock = (DWORD*)(obj + 0x5568);
+        mjclock = (DWORD*)(base + 0x838);
+        plants = {plant, obj + 0xbc};
+        zombies = {zombie, obj + 0xa0};
+    }
+    // PLANT get_plant(int row, int col) const { // 它现在是错的
+    //     int cnt_max = plants.cnt_max().read();
+    //     for(int idx = 0; idx < cnt_max; idx++) {
+    //         PLANT p = plants[idx];
+    //         if((int)p.row().read() == row && (int)p.col(),read() == col)
+    //             return p;
+    //     }
+    //     return {0};
+    // }
+};
+
 
 #ifdef SCRIPT_DLL
 static DWORD* data_pos;
@@ -297,4 +414,7 @@ inline INJECTOR& INJECTOR::event2(const COMPARE& cond, int delay, const INJECTOR
     data_pos++;
     return *this;
 }
+
+#define $ INJECTOR()
+
 #endif

@@ -58,11 +58,17 @@ bool ReadTestStr(const char* input_str) {
         for(char x : sPlantType[i])
             if(x != ' ' && x != '\t' && x != '\r')
                 s.push_back(x);
-        if(s.length() != 5) return false;
-        for(int j = 0; j < 5; j++) {
-            v1[i].push_back(string(""));
-            v1[i][j].push_back(s[j]);
+        
+        int cnt = -1;
+        for(int j = 0; j < (int)s.size(); j++) {
+            if(s[j] != '+') {
+                v1[i].push_back(string(""));
+                v1[i][++cnt].push_back(s[j]);
+            } else if(cnt == -1 || v1[i][cnt].length() != 1) return false;
+            else if(v1[i][cnt][0] == '.') return false;
+            else v1[i][cnt].push_back('+');
         }
+        if(cnt != 4) return false;
     }
     divide_text(sZombieType, v2);
     divide_text(sZombieTime, v3);
@@ -73,8 +79,11 @@ bool ReadTestStr(const char* input_str) {
     if(args.ZombieCnt != v4.size()) return false;
     for(int i = 0; i < 5; i++)
         for(int j = 0; j < 5; j++) {
-            if(m_p.count(v1[i][j]) == 0) return false;
-            args.PlantType[i][j] = m_p[v1[i][j]];
+            string s(v1[i][j].substr(0, 1));
+            if(m_p.count(s) == 0) return false;
+            args.PlantType[i][j] = m_p[s];
+            if(v1[i][j].length() == 2)
+                args.PlantType[i][j] += 0x80;
         }
     args.KeyCnt = v0.size();
     if(args.KeyCnt == 0 || args.KeyCnt > 10) return false;
