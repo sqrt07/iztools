@@ -4,6 +4,7 @@ void InjectCode(int resID);
 
 HANDLE hGameProcess = NULL;
 HWND hGameWindow = NULL;
+extern HMODULE hDLL;
 extern HWND hCountInput, hKeyPlantInput;
 extern HWND hPlantType[5], hZombieType[5], hZombieTime[5], hZombieCol[5];
 extern HWND hPlantNo[5];
@@ -42,6 +43,7 @@ bool ReadEditText() {
         if(t == -1) return false;
         plants_type[i] = t;
     }
+    if(plants_type[key_plant_col - 1] == 0xff) return false;
     bool b = false;
     for(int i = 0; i < 5; i++)
         if(plants_type[i] != 0xff)
@@ -176,14 +178,12 @@ void EndTest() {
 
     write_memory<BYTE>(0, 0x700000);  // flag
 
-    if(b5Test && bDLL) {
-        HMODULE hDLL = LoadLibrary("script.dll");
-        if(hDLL) {
-            #pragma GCC diagnostic ignored "-Wcast-function-type"
-            auto Result = (void (*)(HANDLE))GetProcAddress(hDLL, "CallResult");
-            #pragma GCC diagnostic pop
-            if(Result) Result(hGameProcess);
-            FreeLibrary(hDLL);
-        }
+    if(b5Test && bDLL && hDLL) {
+        #pragma GCC diagnostic ignored "-Wcast-function-type"
+        auto Result = (void (*)())GetProcAddress(hDLL, "Result");
+        #pragma GCC diagnostic pop
+        if(Result) Result();
+        FreeLibrary(hDLL);
+        hDLL = nullptr;
     }
 }

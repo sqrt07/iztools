@@ -2,23 +2,20 @@
 #include "asm.h"
 
 void Script(INJECTOR&);
-void Result();
-extern "C" void CallScript(INJECTOR&, HANDLE, pfGETINT, pfGETINT);
-extern "C" void CallResult(HANDLE);
+extern "C" DLLRET CallScript(INJECTOR&, HANDLE, pfGETINT, pfGETINT);
+extern "C" void Result();
 
-static GAMEPTR gp;
+static GAMEPTR game;
 static int(*Zombie)(const std::string&);
 static int(*Plant)(const std::string&);
 
-void CallScript(INJECTOR& Asm, HANDLE hProc, pfGETINT pfPlant, pfGETINT pfZombie) {
+DLLRET CallScript(INJECTOR& Asm, HANDLE hProc, pfGETINT pfPlant, pfGETINT pfZombie) {
     hGameProcess = hProc;
     Zombie = pfZombie;
     Plant = pfPlant;
-    data_pos = (DWORD*)0x700100;
-    gp.init();
+    data_pos = p_eventflag;
+    game.init();
     Script(Asm);
-}
-void CallResult(HANDLE hProc) {
-    hGameProcess = hProc;
-    Result();
+    game.mydata.zero();
+    return {data_pos};
 }

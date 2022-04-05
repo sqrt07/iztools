@@ -9,6 +9,7 @@ extern int start_time;
 extern bool bSpeed, bHalfSpeed, bNoInject, bDLL;
 
 Args args;
+HMODULE hDLL;
 void divide_text(const string& s, vector<string>& v) {
     static const string spaces = " \t\r\n";
     size_t i = 0;
@@ -144,26 +145,26 @@ void Start5Test() {
     Asm.clear();
 
     if(bDLL) {
-        HMODULE hDLL = LoadLibrary("script.dll");
+        hDLL = LoadLibrary("script.dll");
         if(hDLL) {
             #pragma GCC diagnostic ignored "-Wcast-function-type"
-            auto Script = (void (*)(INJECTOR&, HANDLE, pfGETINT, pfGETINT))GetProcAddress(hDLL, "CallScript");
+            auto Script = (DLLRET (*)(INJECTOR&, HANDLE, pfGETINT, pfGETINT))GetProcAddress(hDLL, "CallScript");
             #pragma GCC diagnostic pop
             if(Script) {
-                Asm.mov(EAX, p_myclock)
-                    .cmp(EAX, 0ul)
-                    .if_jmp(jne, INJECTOR().mov(ECX, 10)
-                                           .mov(EAX, -1)
-                                           .mov(EDI, 0x700100)
-                                           .repe().stosd()
-                );
-                Asm.prepareForDLL();
-
                 pfGETINT pfPlant = [](const std::string& s){ return m_p[s]; };
                 pfGETINT pfZombie = [](const std::string& s){ return m_z[s]; };
-                Script(Asm, hGameProcess, pfPlant, pfZombie);
+                INJECTOR ScriptAsm;
+                ScriptAsm.prepareForDLL();
+                DLLRET ret = Script(ScriptAsm, hGameProcess, pfPlant, pfZombie);
+
+                Asm.mov(EAX, p_myclock)
+                    .cmp(EAX, 0ul)
+                    .if_jmp(jne, INJECTOR().mov(ECX, (DWORD)(ret.data_pos - p_eventflag))
+                                           .mov(EAX, -1)
+                                           .mov(EDI, (DWORD)p_eventflag)
+                                           .repe().stosd())
+                    .add(ScriptAsm);
             }
-            FreeLibrary(hDLL);
         }
     }
 
