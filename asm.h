@@ -345,8 +345,9 @@ class GAMEPTR {
        public:
         ITEMSBASE(int ptr = 0, int pitem = 0) : ptr(ptr), pitem(pitem) {}
         int p() const { return ptr; }
-        MEMORY<DWORD> cnt() const { return (DWORD*)(ptr + 16); }
-        MEMORY<DWORD> cnt_max() const { return (DWORD*)(ptr + 4); }
+        MEMORY<DWORD> cnt_max() const { return (DWORD*)ptr + 1; }
+        MEMORY<DWORD> next() const { return (DWORD*)ptr + 3; }
+        MEMORY<DWORD> cnt() const { return (DWORD*)ptr + 4; }
         ITEM operator[](int idx) const { return {pitem + idx * size}; }
     };
     struct PLANT : ITEMBASE {
@@ -371,6 +372,7 @@ class GAMEPTR {
         MEMORY<DWORD> shieldHp() const { return get(0xdc); }
         MEMORY<DWORD> slowCountdown() const { return get(0xac); }
         MEMORY<BYTE> haveHead() const { return get<BYTE>(0xba); }
+        MEMORY<WORD> next() { return get<WORD>(0x158); }
     };
     int base, obj, plant, zombie, bullet, prog;
     MEMORY<DWORD> clock, mjclock, myclock;

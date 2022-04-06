@@ -110,17 +110,6 @@ bool ReadTestStr(const char* input_str) {
         args.ZombieRow[i] = p.x;
         args.ZombieCol[i] = p.y;
     }
-    int idx[20] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
-    stable_sort(idx, idx + args.ZombieCnt, [](int i, int j) -> bool {
-        return args.ZombieTime[i] < args.ZombieTime[j];
-    });
-    Args _args = args;
-    for(int i = 0; i < args.ZombieCnt; i++) {
-        args.ZombieRow[i] = _args.ZombieRow[idx[i]];
-        args.ZombieCol[i] = _args.ZombieCol[idx[i]];
-        args.ZombieType[i] = _args.ZombieType[idx[i]];
-        args.ZombieTime[i] = _args.ZombieTime[idx[i]];
-    }
     args.CardTime = args.ZombieTime[args.ZombieCnt - 1];
     for(int i = 0; i < args.KeyCnt; i++) {
         args.KeyRow[i]--;
@@ -135,9 +124,22 @@ bool ReadTestStr(const char* input_str) {
 
 void Start5Test() {
     INJECTOR Asm;
-    Asm.mov(EAX, p_myclock);
+    gp.init();
+    if(args.ZombieCnt > 0) { // 僵尸编号设置
+        int idx[21] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+        stable_sort(idx, idx + args.ZombieCnt, [](int i, int j) {
+            return args.ZombieTime[i] < args.ZombieTime[j];
+        }); // idx[i]: 第i个放置的僵尸的栈位
+        INJECTOR Asm2;
+        Asm2.mov(gp.zombies.cnt_max(), args.ZombieCnt)
+            .mov(gp.zombies.next(), idx[0]);
+        for(int i = 0; i < args.ZombieCnt; i++)
+            Asm2.mov(gp.zombies[idx[i]].next(), idx[i + 1]);
+        Asm.cmp(gp.myclock, 0)
+           .if_jmp(jne, Asm2);
+    }
     for(int i = 0; i < args.ZombieCnt; i++) {
-        Asm.cmp(EAX, args.ZombieTime[i])
+        Asm.cmp(gp.myclock, args.ZombieTime[i])
             .if_jmp(jne, INJECTOR()
                              .use_card(args.ZombieRow[i], args.ZombieCol[i], args.ZombieType[i]));
     }
@@ -151,8 +153,8 @@ void Start5Test() {
             auto Script = (DLLRET (*)(INJECTOR&, HANDLE, pfGETINT, pfGETINT))GetProcAddress(hDLL, "CallScript");
             #pragma GCC diagnostic pop
             if(Script) {
-                pfGETINT pfPlant = [](const std::string& s){ return m_p[s]; };
-                pfGETINT pfZombie = [](const std::string& s){ return m_z[s]; };
+                pfGETINT pfPlant = [](const string& s){ return m_p[s]; };
+                pfGETINT pfZombie = [](const string& s){ return m_z[s]; };
                 INJECTOR ScriptAsm;
                 ScriptAsm.prepareForDLL();
                 DLLRET ret = Script(ScriptAsm, hGameProcess, pfPlant, pfZombie);
