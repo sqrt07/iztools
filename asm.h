@@ -284,18 +284,18 @@ class GAMEPTR {
         operator T*() const { return ptr; }
         T read() const { return read_memory(ptr); }
         void write(T x) const { return write_memory(x, ptr); }
-        COMPARE operator==(MEMORY<T> p2) { return {ptr,  EQUAL, p2.ptr}; }
-        COMPARE operator!=(MEMORY<T> p2) { return {ptr, NEQUAL, p2.ptr}; }
-        COMPARE operator< (MEMORY<T> p2) { return {ptr,  BELOW, p2.ptr}; }
-        COMPARE operator>=(MEMORY<T> p2) { return {ptr, NBELOW, p2.ptr}; }
-        COMPARE operator> (MEMORY<T> p2) { return {ptr,  ABOVE, p2.ptr}; }
-        COMPARE operator<=(MEMORY<T> p2) { return {ptr, NABOVE, p2.ptr}; }
-        COMPARE operator==(T x) { return {ptr,  EQUAL, x}; }
-        COMPARE operator!=(T x) { return {ptr, NEQUAL, x}; }
-        COMPARE operator< (T x) { return {ptr,  BELOW, x}; }
-        COMPARE operator>=(T x) { return {ptr, NBELOW, x}; }
-        COMPARE operator> (T x) { return {ptr,  ABOVE, x}; }
-        COMPARE operator<=(T x) { return {ptr, NABOVE, x}; }
+        COMPARE operator==(MEMORY<T> p2) const { return {ptr,  EQUAL, p2.ptr}; }
+        COMPARE operator!=(MEMORY<T> p2) const { return {ptr, NEQUAL, p2.ptr}; }
+        COMPARE operator< (MEMORY<T> p2) const { return {ptr,  BELOW, p2.ptr}; }
+        COMPARE operator>=(MEMORY<T> p2) const { return {ptr, NBELOW, p2.ptr}; }
+        COMPARE operator> (MEMORY<T> p2) const { return {ptr,  ABOVE, p2.ptr}; }
+        COMPARE operator<=(MEMORY<T> p2) const { return {ptr, NABOVE, p2.ptr}; }
+        COMPARE operator==(T x) const { return {ptr,  EQUAL, x}; }
+        COMPARE operator!=(T x) const { return {ptr, NEQUAL, x}; }
+        COMPARE operator< (T x) const { return {ptr,  BELOW, x}; }
+        COMPARE operator>=(T x) const { return {ptr, NBELOW, x}; }
+        COMPARE operator> (T x) const { return {ptr,  ABOVE, x}; }
+        COMPARE operator<=(T x) const { return {ptr, NABOVE, x}; }
     };
     template<typename T>
     class POINTER {
@@ -331,9 +331,10 @@ class GAMEPTR {
         }
     };
     class ITEMBASE {
-        int ptr;
+        int idx, ptr;
        public:
-        ITEMBASE(int ptr = 0) : ptr(ptr) {}
+        ITEMBASE() = default;
+        ITEMBASE(int idx, int ptr) : idx(idx), ptr(ptr) {}
         int p() const { return ptr; }
         template<typename T = DWORD>
         MEMORY<T> get(int offset) const { return (T*)(ptr + offset); }
@@ -348,13 +349,14 @@ class GAMEPTR {
         MEMORY<DWORD> cnt_max() const { return (DWORD*)ptr + 1; }
         MEMORY<DWORD> next() const { return (DWORD*)ptr + 3; }
         MEMORY<DWORD> cnt() const { return (DWORD*)ptr + 4; }
-        ITEM operator[](int idx) const { return {pitem + idx * size}; }
+        ITEM operator[](int idx) const { return {idx, pitem + idx * size}; }
     };
     struct PLANT : ITEMBASE {
         using ITEMBASE::ITEMBASE;
         // 以下函数命名与CVP保持一致
         MEMORY<DWORD> col() const { return get(0x28); } // 从0开始
         MEMORY<DWORD> hp() const { return get(0x40); }
+        MEMORY<DWORD> propCountdown() const { return get(0x54); }
         MEMORY<DWORD> attackCountdown() const { return get(0x58); }
         MEMORY<DWORD> row() const { return get(0x88); } // 从0开始
         MEMORY<DWORD> shootCountdown() const { return get(0x90); }
@@ -367,6 +369,7 @@ class GAMEPTR {
         MEMORY<float> x() const { return get<float>(0x2c); }
         MEMORY<float> y() const { return get<float>(0x30); }
         MEMORY<float> v() const { return get<float>(0x34); }
+        MEMORY<BYTE> eating() const { return get<BYTE>(0x51); }
         MEMORY<DWORD> hp() const { return get(0xc8); }
         MEMORY<DWORD> helmetHp() const { return get(0xd0); }
         MEMORY<DWORD> shieldHp() const { return get(0xdc); }
@@ -379,6 +382,7 @@ class GAMEPTR {
     ITEMSBASE<PLANT, 0x14c> plants;
     ITEMSBASE<ZOMBIE, 0x15c> zombies;
     AUTOPOINTER<DWORD> mydata;
+    DWORD cardTime[20];
     void init() {
         base = read_memory<int>(0x6a9ec0);
         obj = read_memory<int>(base + 0x768);
@@ -392,6 +396,10 @@ class GAMEPTR {
         plants = {obj + 0xac, plant};
         zombies = {obj + 0x90, zombie};
         mydata = {(DWORD*)0x700900};
+    }
+    // 判断编号为idx的僵尸是否已经放下
+    COMPARE placed(int idx) const {
+        return myclock >= cardTime[idx];
     }
 };
 
@@ -430,6 +438,12 @@ inline INJECTOR& INJECTOR::event2(const COMPARE& cond, const INJECTOR& Asm, int 
 
 #endif
 
+struct DLLARGS {
+    HANDLE hProc;
+    pfGETINT pfPlant, pfZombie;
+    DWORD* cardTime;
+};
 struct DLLRET {
     DWORD* data_pos;
 };
+#define DLLVERSION 22'04'10'00

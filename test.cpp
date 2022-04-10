@@ -9,7 +9,7 @@ extern HWND hCountInput, hKeyPlantInput;
 extern HWND hPlantType[5], hZombieType[5], hZombieTime[5], hZombieCol[5];
 extern HWND hPlantNo[5];
 
-extern bool bSpeed, bHalfSpeed, bNoInject, b5Test, bDelayInf, bDLL;
+extern bool bSpeed, bHalfSpeed, bNoInject, b5Test, bDelayInf, bDLL, bDLLSuccess;
 
 DWORD count_max = 1000, key_plant_col = 1;
 BYTE plants_type[5], plants_col[5], zombies_type[5], zombies_col[5];
@@ -178,7 +178,7 @@ void EndTest() {
 
     write_memory<BYTE>(0, 0x700000);  // flag
 
-    if(b5Test && bDLL && hDLL) {
+    if(bDLLSuccess) {
         #pragma GCC diagnostic ignored "-Wcast-function-type"
         auto Result = (void (*)())GetProcAddress(hDLL, "Result");
         #pragma GCC diagnostic pop

@@ -35,7 +35,7 @@ void GetString(char*);
 void SetString(const char*);
 bool ReadTestStr(const char*);
 void StartTest();
-void Start5Test();
+bool Start5Test();
 
 BOOL CALLBACK SetChildWndFont(HWND hWnd, LPARAM lParam) {
     SendMessage(hWnd, WM_SETFONT, (WPARAM)lParam, 1);
@@ -98,7 +98,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
                 break;
             }
             if(!Prepare(hWnd)) break;
-            b5Test ? Start5Test() : StartTest();
+            if(b5Test) {
+                if(!Start5Test()) break;
+            }else StartTest();
             DialogBox(hInst, MAKEINTRESOURCE(IDD_DIALOG), hWnd, (DLGPROC)DlgProc);
             break;
         }

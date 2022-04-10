@@ -7,6 +7,7 @@ extern HWND hCountInput, h5TestInput, hMjlockInput;
 
 extern int start_time;
 extern bool bSpeed, bHalfSpeed, bNoInject, bDLL;
+bool bDLLSuccess;
 
 Args args;
 HMODULE hDLL;
@@ -122,7 +123,30 @@ bool ReadTestStr(const char* input_str) {
     return true;
 }
 
-void Start5Test() {
+void LoadDLL(INJECTOR& Asm) {
+    hDLL = LoadLibrary("script.dll");
+    if(!hDLL) return;
+    #pragma GCC diagnostic ignored "-Wcast-function-type"
+    auto Script = (bool (*)(INJECTOR&, int, const DLLARGS&, DLLRET&))GetProcAddress(hDLL, "CallScript");
+    #pragma GCC diagnostic pop
+    if(!Script) { FreeLibrary(hDLL); hDLL = nullptr; return; }
+    pfGETINT pfPlant = [](const string& s){ return m_p[s]; };
+    pfGETINT pfZombie = [](const string& s){ return m_z[s]; };
+    INJECTOR ScriptAsm;
+    ScriptAsm.prepareForDLL();
+    DLLARGS dllargs = { hGameProcess, pfPlant, pfZombie, args.ZombieTime };
+    DLLRET ret = {};
+    bDLLSuccess = Script(ScriptAsm, DLLVERSION, dllargs, ret);
+    if(!bDLLSuccess) { FreeLibrary(hDLL); hDLL = nullptr; return; }
+    Asm.mov(EAX, p_myclock)
+        .cmp(EAX, 0ul)
+        .if_jmp(jne, INJECTOR().mov(ECX, (DWORD)(ret.data_pos - p_eventflag))
+                            .mov(EAX, -1)
+                            .mov(EDI, (DWORD)p_eventflag)
+                            .repe().stosd())
+        .add(ScriptAsm);
+}
+bool Start5Test() {
     INJECTOR Asm;
     gp.init();
     if(args.ZombieCnt > 0) { // 僵尸编号设置
@@ -145,30 +169,16 @@ void Start5Test() {
     }
     Asm.write((void*)0x651800);
     Asm.clear();
-
+    
+    bDLLSuccess = false;
     if(bDLL) {
-        hDLL = LoadLibrary("script.dll");
         if(hDLL) {
-            #pragma GCC diagnostic ignored "-Wcast-function-type"
-            auto Script = (DLLRET (*)(INJECTOR&, HANDLE, pfGETINT, pfGETINT))GetProcAddress(hDLL, "CallScript");
-            #pragma GCC diagnostic pop
-            if(Script) {
-                pfGETINT pfPlant = [](const string& s){ return m_p[s]; };
-                pfGETINT pfZombie = [](const string& s){ return m_z[s]; };
-                INJECTOR ScriptAsm;
-                ScriptAsm.prepareForDLL();
-                DLLRET ret = Script(ScriptAsm, hGameProcess, pfPlant, pfZombie);
-
-                Asm.mov(EAX, p_myclock)
-                    .cmp(EAX, 0ul)
-                    .if_jmp(jne, INJECTOR().mov(ECX, (DWORD)(ret.data_pos - p_eventflag))
-                                           .mov(EAX, -1)
-                                           .mov(EDI, (DWORD)p_eventflag)
-                                           .repe().stosd())
-                    .add(ScriptAsm);
-            }
+            MessageBox(hWnd, "DLL未退出", "提示", MB_OK | MB_ICONINFORMATION);
+            return false;
         }
+        LoadDLL(Asm);
     }
+    
 
     Asm.write((void*)0x651b00);  // ret
 
@@ -205,6 +215,7 @@ void Start5Test() {
     bRunning = true;
     if(!bNoInject) InjectCode(IDR_CODE5);
     write_memory<DWORD>(0x23b562e9, 0x415b29);  // 跳转
+    return true;
 }
 
 void GetString(char* s) {

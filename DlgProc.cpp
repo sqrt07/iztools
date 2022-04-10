@@ -3,7 +3,7 @@
 #include <mingw.std.thread.h> // <thread>
 
 extern int start_time;
-extern bool b5Test;
+extern bool b5Test, bDLLSuccess;
 HWND hResText, hTimeText;
 int test_cnt = 0;
 bool UpdateResult(HWND hDlg, int sec, int tcnt) {
@@ -50,6 +50,8 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
             CreateWindow("button", "直接失败", WS_VISIBLE | WS_CHILD, 95, 85, 80, 25, hDlg, (HMENU)ID_SETLOSE, hInst, NULL);
         }
         hTimeText = CreateWindow("edit", "", WS_VISIBLE | WS_CHILD | ES_READONLY, 10, 60, 200, 20, hDlg, NULL, hInst, NULL);
+        if(bDLLSuccess)
+            CreateWindow("static", "DLL加载成功", WS_VISIBLE | WS_CHILD, 10, 115, 120, 25, hDlg, 0, hInst, NULL);
         hFont = CreateFont(20, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 32, "Microsoft YaHei");
         EnumChildWindows(hDlg, SetChildWndFont, (LPARAM)hFont);
 
