@@ -32,6 +32,7 @@
 #define IDM_DELAYINF		911
 #define IDM_CARD			912
 #define IDM_DATA			913
+#define IDM_SHOWME			914
 
 #define IDR_CODE			1001
 #define IDR_CODE5			1002

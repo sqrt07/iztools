@@ -25,6 +25,7 @@ const char* keyPlant = "1";
 bool bSpeed = true, bHalfSpeed = false, bNoInject = false;
 bool bRunning = false;
 bool b5Test = false, bDLL = false, bDelayInf = false, bVBECard = false;
+bool bShowMe;
 
 BOOL CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK RowsDlgProc(HWND, UINT, WPARAM, LPARAM);
@@ -160,6 +161,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             CheckMenuItem(hMenu, IDM_CARD, MF_BYCOMMAND | flag);
             bVBECard = !bVBECard;
             write_memory<DWORD>(bVBECard ? 0x90909090 : 0x01544583, 0x430dce);
+            break;
+        }
+        case IDM_SHOWME: {
+            HWND hWnd = FindWindow("Qt5150QWindowIcon", "ShowMe 1.1");
+            if(!hWnd) break;
+            DWORD proc_id;
+            GetWindowThreadProcessId(hWnd, &proc_id);
+            HANDLE hProc = OpenProcess(PROCESS_ALL_ACCESS, false, proc_id);
+            if(!hProc) break;
+            BYTE old_code[] = {0xff, 0x15, 0x28, 0x20, 0x49, 0x00};
+            BYTE code[] = {0x83, 0xc4, 0x14, 0x90, 0x90, 0x90};
+            WriteProcessMemory(hProc, (void*)0x482ab4, bShowMe ? old_code : code, sizeof(code), nullptr);
+            int flag = bShowMe ? MF_UNCHECKED : MF_CHECKED;
+            CheckMenuItem(hMenu, IDM_SHOWME, MF_BYCOMMAND | flag);
+            bShowMe = !bShowMe;
             break;
         }
         case IDM_HELP:

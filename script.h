@@ -26,7 +26,7 @@ bool CallScript(INJECTOR& Asm, int ver, const DLLARGS& dllargs, DLLRET& dllret) 
     data_pos = p_eventflag;
     game.init();
     Script(Asm);
-    game.mydata.zero();
+    game.data.zero();
     dllret.data_pos = data_pos;
     return true;
 }

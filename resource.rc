@@ -43,6 +43,7 @@ BEGIN
 		MENUITEM "调整行...", IDM_ROWS
 		MENUITEM "修改...", IDM_DATA
 		MENUITEM "卡片不消失", IDM_CARD
+		MENUITEM "ShowMe修复", IDM_SHOWME
 	END
 	POPUP "帮助"
 	BEGIN

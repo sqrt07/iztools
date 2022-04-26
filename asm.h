@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include <sstream>
+#include <fstream>
 #include "memory.h"
 
 static_assert(sizeof(void*) == 4, "请使用32位编译");
@@ -18,13 +19,30 @@ enum CONDJMP : BYTE { jb  = 2, NBELOW = 2,
                       jne = 5,  EQUAL = 5,
                       jna = 6,  ABOVE = 6,
                       ja  = 7, NABOVE = 7 };
-
+// 寄存器 + 偏移地址
+template<typename T = DWORD>
+struct PREG {
+    REG r;
+    int off;
+    PREG(REG r, int offset = 0) : r(r), off(offset) {}
+    PREG operator+(int offset) const {
+        return {r, off + offset};
+    }
+};
+inline static const PREG PEAX(EAX), PEBX(EBX), PECX(ECX), PEDX(EDX),
+                         PESP(ESP), PEBP(EBP), PESI(ESI), PEDI(EDI);
 
 inline DWORD* const p_eventflag = (DWORD*)0x700100;
 inline DWORD* const p_myclock = (DWORD*)0x700010;
+inline DWORD* const p_mylog = (DWORD*)0x701000;
 
 class COMPARE;
 #define $ INJECTOR()
+#define $if $.if_
+#define $mov $.mov
+#define True COMPARE()
+#define zb game.zombies
+#define pl game.plants
 class INJECTOR {
     std::vector<BYTE> code;
 
@@ -82,21 +100,28 @@ class INJECTOR {
     INJECTOR& mov(BYTE* p, BYTE c) {  // mov byte ptr[p], c
         return add_word(0x05c6).add_ptr(p).add_byte(c);
     }
+    INJECTOR& mov(PREG<DWORD> pr, REG r) {  // mov dword ptr[pr + offset], r
+        add_byte(0x89);
+        if(pr.off == 0) return add_byte(r * 8 + pr.r);
+        else if((signed char)pr.off == pr.off)
+            return add_byte(0x40 + r * 8 + pr.r).add_byte(pr.off);
+        else return add_byte(0x80 + r * 8 + pr.r).add_dword(pr.off);
+    }
     INJECTOR& add(REG r, REG r2) {  // add r, r2
         return add_byte(0x01).add_byte(0xc0 + r2 * 8 + r);
     }
     INJECTOR& add(REG r, DWORD c) {  // add r, c
-        if((BYTE)c == c) return add_byte(0x83).add_byte(0xc0 + r).add_byte(c);
+        if((signed char)c == c) return add_byte(0x83).add_byte(0xc0 + r).add_byte(c);
         if(r == EAX) add_byte(0x05);
         else add_byte(0x81).add_byte(0xc0 + r);
         return add_dword(c);
     }
     INJECTOR& add(DWORD* p, DWORD c) {  // add dword ptr[p], c
-        if((BYTE)c == c) return add_word(0x0583).add_ptr(p).add_byte(c);
+        if((signed char)c == c) return add_word(0x0583).add_ptr(p).add_byte(c);
         else return add_word(0x0581).add_ptr(p).add_dword(c);
     }
     INJECTOR& sub(REG r, DWORD c) {  // sub r, c
-        if((BYTE)c == c) return add_byte(0x83).add_byte(0xe8 + r).add_byte(c);
+        if((signed char)c == c) return add_byte(0x83).add_byte(0xe8 + r).add_byte(c);
         if(r == EAX) add_byte(0x2d);
         else add_byte(0x81).add_byte(0xe8 + r);
         return add_dword(c);
@@ -172,34 +197,64 @@ class INJECTOR {
     INJECTOR& lose() {
         return mov((BYTE*)0x700002, 1);
     }
+    INJECTOR& log(REG r) {
+        return push(EDI)
+              .mov(EDI, p_mylog - 1)
+              .mov(PEDI, r)
+              .add(p_mylog - 1, 4)
+              .pop(EDI);
+    }
+    INJECTOR log(DWORD* p) {
+        return push(EAX)
+              .mov(EAX, p)
+              .log(EAX)
+              .pop(EAX);
+    }
+    INJECTOR log(void* p) {
+        return push(EAX)
+              .mov(EAX, (DWORD*)p)
+              .log(EAX)
+              .pop(EAX);
+    }
     INJECTOR& cond_jmp(CONDJMP code, DWORD addr) {
-        if((BYTE)addr == addr)
-            return add_byte(0x70 + code).add_byte((BYTE)addr);
+        if((signed char)addr == addr)
+            return add_byte(0x70 + code).add_byte(addr);
         else
             return add_byte(0x0f).add_byte(0x80 + code).add_dword(addr);
     }
     INJECTOR& jmp(DWORD addr) {
-        if((BYTE)addr == addr)
-            return add_byte(0xeb).add_byte((BYTE)addr);
+        if((signed char)addr == addr)
+            return add_byte(0xeb).add_byte(addr);
         else
             return add_byte(0xe9).add_dword(addr);
     }
     INJECTOR& if_jmp(CONDJMP code, const INJECTOR& Asm) {
         return cond_jmp(code, Asm.len()).add(Asm);
     }
+    // if语句（满足条件则执行）
+    INJECTOR& if_(const COMPARE& cond, const INJECTOR& Asm);
+    // if-else语句（满足条件则执行Asm，否则执行Asm2）
+    INJECTOR& if_(const COMPARE& cond, const INJECTOR& Asm, const INJECTOR& Asm2);
+
+    // 添加执行无数次的事件
+    // cond:  触发条件（用&&连接要求同时满足的多个条件）
+    // Asm:   执行的代码
+    // delay: 触发后延迟的时间（延迟时不再次触发）
+    // 例：event0(True, xxx, 1)创建了隔帧执行的事件
+    INJECTOR& event0(const COMPARE& cond, const INJECTOR& Asm, DWORD delay = 0);
 
     // 添加只执行一次的事件（第一次触发）
     // cond:  触发条件（用&&连接要求同时满足的多个条件）
     // Asm:   执行的代码
     // delay: 触发后延迟的时间
-    INJECTOR& event1(const COMPARE& cond, const INJECTOR& Asm, int delay = 0);
+    INJECTOR& event1(const COMPARE& cond, const INJECTOR& Asm, DWORD delay = 0);
 
     // 添加只执行一次的事件（最后一次触发：等待过程中如果再次触发条件，重新delay）
     // cond:  触发条件（用&&连接要求同时满足的多个条件）
     // delay: 触发后延迟的时间
     // Asm:   执行的代码
     // cond2: 二次判断的条件（可省略）：执行代码时检查是否满足条件，若不满足则取消执行，重新等待
-    INJECTOR& event2(const COMPARE& cond, const INJECTOR& Asm, int delay,
+    INJECTOR& event2(const COMPARE& cond, const INJECTOR& Asm, DWORD delay,
                      const COMPARE& cond2);
 
     // row和col从1开始；type使用Zombie("xx")
@@ -305,6 +360,7 @@ class GAMEPTR {
         T* p() const { return ptr; }
         MEMORY<T> operator*() const { return ptr; }
         MEMORY<T>* operator->() { return &ptr; }
+        PREG<T> operator[](PREG<T> pr) const { return pr + (int)p(); }
         MEMORY<T> operator[](int x) const { return p() + x; }
         POINTER<T> operator+(int x) const { return p() + x; }
         POINTER<T> operator-(int x) const { return p() - x; }
@@ -322,12 +378,23 @@ class GAMEPTR {
         void zero() const {
             for(int x : used)
                 (*this + x)->write(0);
+            write_memory((DWORD)p_mylog, p_mylog - 1);
         }
         void show() const {
             std::ostringstream sout;
             for(int x : used)
                 sout << "[" << x << "] = " << (*this + x)->read() << '\n';
-            MessageBox(nullptr, sout.str().c_str(), "mydata", MB_ICONINFORMATION);
+            MessageBox(nullptr, sout.str().c_str(), "data", MB_ICONINFORMATION);
+        }
+        void log(const char* filename = "log.txt", bool bfloat = false, int prec = 6) const {
+            std::ios::sync_with_stdio(false);
+            std::ofstream fout(filename);
+            if(bfloat) fout.precision(prec);
+            DWORD* pend = (DWORD*)read_memory(p_mylog - 1);
+            for(DWORD* p = p_mylog; p < pend; ++p)
+                if(!bfloat) fout << read_memory(p) << '\n';
+                else fout << read_memory((float*)p) << '\n';
+            fout.close();
         }
     };
     class ITEMBASE {
@@ -381,7 +448,7 @@ class GAMEPTR {
     MEMORY<DWORD> clock, mjclock, myclock;
     ITEMSBASE<PLANT, 0x14c> plants;
     ITEMSBASE<ZOMBIE, 0x15c> zombies;
-    AUTOPOINTER<DWORD> mydata;
+    AUTOPOINTER<DWORD> data;
     DWORD cardTime[20];
     void init() {
         base = read_memory<int>(0x6a9ec0);
@@ -395,7 +462,7 @@ class GAMEPTR {
         myclock = p_myclock;
         plants = {obj + 0xac, plant};
         zombies = {obj + 0x90, zombie};
-        mydata = {(DWORD*)0x700900};
+        data = {(DWORD*)0x700900};
     }
     // 判断编号为idx的僵尸是否已经放下
     COMPARE placed(int idx) const {
@@ -406,11 +473,33 @@ class GAMEPTR {
 
 #ifndef SCRIPT_DLL
 #undef $
+#undef $if
+#undef mov
+#undef True
+#undef zb
+#undef pl
 #else
 
 static DWORD* data_pos;
 
-inline INJECTOR& INJECTOR::event1(const COMPARE& cond, const INJECTOR& Asm, int delay) {
+inline INJECTOR& INJECTOR::if_(const COMPARE& cond, const INJECTOR& Asm) {
+    return add(cond.if_jmp(Asm));
+}
+inline INJECTOR& INJECTOR::if_(const COMPARE& cond, const INJECTOR& Asm, const INJECTOR& Asm2) {
+    return add(cond.if_jmp(INJECTOR(Asm).jmp(Asm2.len()))).add(Asm2);
+}
+inline INJECTOR& INJECTOR::event0(const COMPARE& cond, const INJECTOR& Asm, DWORD delay) {
+    COMPARE comp = COMPARE(data_pos, EQUAL, -1) && cond;
+    add(comp.if_jmp($.mov(EAX, p_myclock)
+                     .add(EAX, delay)
+                     .mov(data_pos, EAX)));
+    mov(EAX, data_pos);
+    cmp(EAX, p_myclock);
+    if_jmp(jne, INJECTOR(Asm).mov(EAX, -1).mov(data_pos, EAX));
+    data_pos++;
+    return *this;
+}
+inline INJECTOR& INJECTOR::event1(const COMPARE& cond, const INJECTOR& Asm, DWORD delay) {
     COMPARE comp = COMPARE(data_pos, EQUAL, -1) && cond;
     add(comp.if_jmp($.mov(EAX, p_myclock)
                      .add(EAX, delay)
@@ -421,7 +510,7 @@ inline INJECTOR& INJECTOR::event1(const COMPARE& cond, const INJECTOR& Asm, int 
     data_pos++;
     return *this;
 }
-inline INJECTOR& INJECTOR::event2(const COMPARE& cond, const INJECTOR& Asm, int delay,
+inline INJECTOR& INJECTOR::event2(const COMPARE& cond, const INJECTOR& Asm, DWORD delay,
                                   const COMPARE& cond2 = COMPARE()) {
     COMPARE comp = COMPARE(data_pos, NEQUAL, -2) && cond;
     add(comp.if_jmp($.mov(EAX, p_myclock)
