@@ -23,7 +23,7 @@ extern HWND hGameWindow;
 
 extern bool bRunning;
 
-void EndTest();
+void EndTest(bool flag = false);
 void InitTextMap();
 int FindPlantInMap(std::string s);
 int FindZombieInMap(std::string s);
@@ -44,6 +44,8 @@ struct Args {
     BYTE NoMj;
 };
 
+void* AllocMemory(int size);
+
 extern LPCSTR str_help, str_help5, str_char, str_about;
 
-#define VERSION "v1.3.5"
+#define VERSION "v1.4.0"

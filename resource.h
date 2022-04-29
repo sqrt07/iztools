@@ -10,6 +10,10 @@
 #define ID_CPYRES			103
 #define ID_SETWIN			104
 #define ID_SETLOSE			105
+#define ID_NOREPLAY			106
+#define ID_LOSEREPLAY		107
+#define ID_WINREPLAY		108
+#define ID_BTNREPLAY		109
 
 #define IDD_ROWS			201
 #define ID_MODIFYROWS		202
@@ -33,6 +37,7 @@
 #define IDM_CARD			912
 #define IDM_DATA			913
 #define IDM_SHOWME			914
+#define IDM_FREEPLANTING	915
 
 #define IDR_CODE			1001
 #define IDR_CODE5			1002

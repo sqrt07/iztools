@@ -10,6 +10,7 @@ extern HWND hPlantType[5], hZombieType[5], hZombieTime[5], hZombieCol[5];
 extern HWND hPlantNo[5];
 
 extern bool bSpeed, bHalfSpeed, bNoInject, b5Test, bDelayInf, bDLL, bDLLSuccess;
+extern bool bFreePlanting;
 
 DWORD count_max = 1000, key_plant_col = 1;
 BYTE plants_type[5], plants_col[5], zombies_type[5], zombies_col[5];
@@ -163,11 +164,11 @@ void StartTest() {
     //	write_memory<DWORD>(0x001fd625, 0x453a67);
     write_memory<DWORD>(0x23b562e9, 0x415b29);  // Ìø×ª
 }
-void EndTest() {
+void EndTest(bool flag) {
     //	write_memory<DWORD>(0x000fe735, 0x453a67);
     write_memory<DWORD>(0x5568be01, 0x415b29);  // Ìø×ª
     write_memory<BYTE>(0x75, 0x42b8f8);
-    write_memory<BYTE>(0, 0x6a9ec0, 0x814);
+    if(!bFreePlanting) write_memory<BYTE>(0, 0x6a9ec0, 0x814);
     bRunning = false;
 
     write_memory<DWORD>(1, 0x6a66f4);
@@ -176,9 +177,10 @@ void EndTest() {
     if(bSpeed || bHalfSpeed)
         write_memory<DWORD>(10, 0x6a9ec0, 0x454);
 
+    write_memory<BYTE>(0, 0x70001c);  // flag_data
     write_memory<BYTE>(0, 0x700000);  // flag
 
-    if(bDLLSuccess) {
+    if(bDLLSuccess && !flag) {
         #pragma GCC diagnostic ignored "-Wcast-function-type"
         auto Result = (void (*)())GetProcAddress(hDLL, "Result");
         #pragma GCC diagnostic pop

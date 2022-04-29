@@ -15,3 +15,8 @@ void RunRemoteCode() {
     WaitForSingleObject(th, INFINITE);
     CloseHandle(th);
 }
+
+void* AllocMemory(int size) {
+    void* p = VirtualAllocEx(hGameProcess, NULL, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    return p;
+}

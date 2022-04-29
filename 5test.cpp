@@ -9,6 +9,8 @@ extern int start_time;
 extern bool bSpeed, bHalfSpeed, bNoInject, bDLL;
 bool bDLLSuccess;
 
+PVOID pData, pCode, pCode2;
+
 Args args;
 HMODULE hDLL;
 void divide_text(const string& s, vector<string>& v) {
@@ -147,20 +149,19 @@ void LoadDLL(INJECTOR& Asm) {
         .add(ScriptAsm);
 }
 bool Start5Test() {
-    INJECTOR Asm;
+    INJECTOR Asm, Asm2;
     gp.init();
     if(args.ZombieCnt > 0) { // 僵尸编号设置
         int idx[21] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
         stable_sort(idx, idx + args.ZombieCnt, [](int i, int j) {
             return args.ZombieTime[i] < args.ZombieTime[j];
         }); // idx[i]: 第i个放置的僵尸的栈位
-        INJECTOR Asm2;
         Asm2.mov(gp.zombies.cnt_max(), args.ZombieCnt)
             .mov(gp.zombies.next(), idx[0]);
         for(int i = 0; i < args.ZombieCnt; i++)
             Asm2.mov(gp.zombies[idx[i]].next(), idx[i + 1]);
         Asm.cmp(gp.myclock, 0)
-           .if_jmp(jne, Asm2);
+            .if_jmp(jne, Asm2);
     }
     for(int i = 0; i < args.ZombieCnt; i++) {
         Asm.cmp(gp.myclock, args.ZombieTime[i])
@@ -182,6 +183,73 @@ bool Start5Test() {
 
     Asm.write((void*)0x651b00);  // ret
 
+    Asm.clear(); // rnd_float
+    Asm.add_word(0x058f).add_dword(0x6ffffc) // pop [6ffffc]
+        .mov((DWORD*)0x700018, EDI)
+        .call(0x511cb0) // r_rnd_jieduan_f
+        .add_word(0x35ff).add_dword(0x6ffffc) // push [6ffffc]
+        .cmp((BYTE*)0x70001c, 1)
+        .if_jmp(EQUAL, INJECTOR()
+                           .mov(EDI, (DWORD*)0x700014)
+                           .add_word(0x17d9) // fst [edi]
+                           .add(EDI, 4)
+                           .mov((DWORD*)0x700014, EDI))
+        .cmp((BYTE*)0x70001c, 2)
+        .if_jmp(EQUAL, INJECTOR()
+                           .mov(EDI, (DWORD*)0x700020)
+                           .cmp(EDI, (DWORD*)0x700014)
+                           .if_jmp(BELOW, INJECTOR()
+                                              .add_word(0xd8dd) // fstp st(0)
+                                              .add_word(0x07d9) // fld [edi]
+                                              .add(EDI, 4)
+                                              .mov((DWORD*)0x700020, EDI)))
+        .mov(EDI, (DWORD*)0x700018);
+    
+    Asm2.clear(); // rnd_int
+    Asm2.mov((DWORD*)0x700018, EDI)
+        .call(0x5af400)
+        .cmp((BYTE*)0x70001c, 1)
+        .if_jmp(EQUAL, INJECTOR()
+                           .mov(EDI, (DWORD*)0x700014)
+                           .mov(PEDI, EAX)
+                           .add(EDI, 4)
+                           .mov((DWORD*)0x700014, EDI))
+        .cmp((BYTE*)0x70001c, 2)
+        .if_jmp(EQUAL, INJECTOR()
+                           .mov(EDI, (DWORD*)0x700020)
+                           .cmp(EDI, (DWORD*)0x700014)
+                           .if_jmp(BELOW, INJECTOR()
+                                              .add_word(0x078b) // mov eax,[edi]
+                                              .add(EDI, 4)
+                                              .mov((DWORD*)0x700020, EDI)))
+        .mov(EDI, (DWORD*)0x700018);
+
+    pData = AllocMemory(204800);
+    write_memory<void*>(pData, 0x700020); // p_data
+
+    pCode = AllocMemory(Asm.len());
+    pCode2 = AllocMemory(Asm2.len());
+    Asm.write(pCode);
+    Asm2.write(pCode2);
+
+    const DWORD pjmp = 0x401872, pjmp2 = pjmp + 5;
+    Asm.clear();
+    Asm.add_byte(0xe9).add_dword((DWORD)pCode - pjmp - 5);
+    Asm.add_byte(0xe9).add_dword((DWORD)pCode2 - pjmp2 - 5);
+    Asm.write((void*)pjmp);
+
+    // 0.23-0.37, 0.66-0.68
+    for(DWORD ptr : {0x524b97, 0x524c3d, 0x53347a, 0x45e085, 0x45dfa3, 0x46c8aa}) {
+        write_memory<BYTE>(0xe8, ptr);
+        write_memory<DWORD>(pjmp - ptr - 5, ptr + 1);
+    }
+    // 普僵顺拐/正常, 136-150, 0-150, 玉米/黄油, mj生成伴舞
+    for(DWORD ptr : {0x52f3d4, 0x45f8ba, 0x45dee2, 0x45f1e5, 0x5287f5, 0x52259f,
+                     0x52b53b, 0x52b357, 0x52b408}) {
+        write_memory<BYTE>(0xe8, ptr);
+        write_memory<DWORD>(pjmp2 - ptr - 5, ptr + 1);
+    }
+
     // 加速
     write_memory<BYTE>(0, 0x6a66f4);
     if(bSpeed) {
@@ -196,6 +264,8 @@ bool Start5Test() {
     write_memory<BYTE>(1, 0x6a9ec0, 0x814);  // 免费种植
     write_memory<WORD>(0x00eb, 0x54eba8);    // 后台运行
 
+    write_memory<BYTE>(0, 0x70001c);            // flag_data
+    write_memory<BYTE>(0, 0x70001d);            // flag_remember
     write_memory<BYTE>(1, 0x700001);            // flag_start
     write_memory<BYTE>(1, 0x700000);            // flag
     write_memory<BYTE>(0, 0x700002);            // flag_state

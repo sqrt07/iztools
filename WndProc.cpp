@@ -25,7 +25,7 @@ const char* keyPlant = "1";
 bool bSpeed = true, bHalfSpeed = false, bNoInject = false;
 bool bRunning = false;
 bool b5Test = false, bDLL = false, bDelayInf = false, bVBECard = false;
-bool bShowMe;
+bool bShowMe = false, bFreePlanting = false;
 
 BOOL CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK RowsDlgProc(HWND, UINT, WPARAM, LPARAM);
@@ -176,6 +176,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             int flag = bShowMe ? MF_UNCHECKED : MF_CHECKED;
             CheckMenuItem(hMenu, IDM_SHOWME, MF_BYCOMMAND | flag);
             bShowMe = !bShowMe;
+            break;
+        }
+        case IDM_FREEPLANTING: {
+            if(!Prepare(hWnd)) break;
+            int flag = bFreePlanting ? MF_UNCHECKED : MF_CHECKED;
+            CheckMenuItem(hMenu, IDM_FREEPLANTING, MF_BYCOMMAND | flag);
+            bFreePlanting = !bFreePlanting;
+            write_memory<BYTE>(bFreePlanting, 0x6a9ec0, 0x814);
             break;
         }
         case IDM_HELP:
