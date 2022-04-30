@@ -9,7 +9,7 @@ extern int start_time;
 extern bool bSpeed, bHalfSpeed, bNoInject, bDLL;
 bool bDLLSuccess;
 
-PVOID pData, pCode, pCode2;
+PVOID pData, pCode, pCode2, pData2;
 
 Args args;
 HMODULE hDLL;
@@ -180,14 +180,27 @@ bool Start5Test() {
         LoadDLL(Asm);
     }
     
-
     Asm.write((void*)0x651b00);  // ret
+
+    pData = AllocMemory(204800);
+    pData2 = AllocMemory(204800);
+    write_memory<void*>(pData, 0x700020); // p_data
+    write_memory<DWORD>(0, 0x700050);
 
     Asm.clear(); // rnd_float
     Asm.add_word(0x058f).add_dword(0x6ffffc) // pop [6ffffc]
         .mov((DWORD*)0x700018, EDI)
         .call(0x511cb0) // r_rnd_jieduan_f
         .add_word(0x35ff).add_dword(0x6ffffc) // push [6ffffc]
+        .cmp((BYTE*)0x70001c, 0)
+        .if_jmp(ABOVE, INJECTOR()
+                           .push(EAX)
+                           .mov(EAX, (DWORD*)0x6ffffc)
+                           .mov(EDI, (DWORD*)0x700050)
+                           .mov(PEDI + (int)pData2, EAX)
+                           .add(EDI, 4)
+                           .mov((DWORD*)0x700050, EDI)
+                           .pop(EAX))
         .cmp((BYTE*)0x70001c, 1)
         .if_jmp(EQUAL, INJECTOR()
                            .mov(EDI, (DWORD*)0x700014)
@@ -208,6 +221,15 @@ bool Start5Test() {
     Asm2.clear(); // rnd_int
     Asm2.mov((DWORD*)0x700018, EDI)
         .call(0x5af400)
+        .cmp((BYTE*)0x70001c, 0)
+        .if_jmp(ABOVE, INJECTOR()
+                           .push(EAX)
+                           .add_word(0x448b).add_word(0x0424) // mov eax,[esp+4]
+                           .mov(EDI, (DWORD*)0x700050)
+                           .mov(PEDI + (int)pData2, EAX)
+                           .add(EDI, 4)
+                           .mov((DWORD*)0x700050, EDI)
+                           .pop(EAX))
         .cmp((BYTE*)0x70001c, 1)
         .if_jmp(EQUAL, INJECTOR()
                            .mov(EDI, (DWORD*)0x700014)
@@ -224,9 +246,6 @@ bool Start5Test() {
                                               .mov((DWORD*)0x700020, EDI)))
         .mov(EDI, (DWORD*)0x700018);
 
-    pData = AllocMemory(204800);
-    write_memory<void*>(pData, 0x700020); // p_data
-
     pCode = AllocMemory(Asm.len());
     pCode2 = AllocMemory(Asm2.len());
     Asm.write(pCode);
@@ -239,13 +258,12 @@ bool Start5Test() {
     Asm.write((void*)pjmp);
 
     // 0.23-0.37, 0.66-0.68
-    for(DWORD ptr : {0x524b97, 0x524c3d, 0x53347a, 0x45e085, 0x45dfa3, 0x46c8aa}) {
+    for(DWORD ptr : {0x524b97, 0x524c3d}) {
         write_memory<BYTE>(0xe8, ptr);
         write_memory<DWORD>(pjmp - ptr - 5, ptr + 1);
     }
-    // 普僵顺拐/正常, 136-150, 0-150, 玉米/黄油, mj生成伴舞
-    for(DWORD ptr : {0x52f3d4, 0x45f8ba, 0x45dee2, 0x45f1e5, 0x5287f5, 0x52259f,
-                     0x52b53b, 0x52b357, 0x52b408}) {
+    // 普僵顺拐/正常, 136-150, 0-150, 玉米/黄油, mj生成伴舞决定伴舞出土时间, 濒死僵尸随机减血, 0x51676d
+    for(DWORD ptr : {0x52f3d4, 0x45f8ba, 0x45dee2, 0x45f1e5, 0x52b53b}) {
         write_memory<BYTE>(0xe8, ptr);
         write_memory<DWORD>(pjmp2 - ptr - 5, ptr + 1);
     }

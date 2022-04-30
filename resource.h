@@ -14,6 +14,7 @@
 #define ID_LOSEREPLAY		107
 #define ID_WINREPLAY		108
 #define ID_BTNREPLAY		109
+#define ID_BTNSAVE			110
 
 #define IDD_ROWS			201
 #define ID_MODIFYROWS		202

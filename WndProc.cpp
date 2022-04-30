@@ -1,4 +1,5 @@
 #include "iztools.h"
+#include <psapi.h>
 
 HFONT hFont;
 HWND hPlantBox;
@@ -172,7 +173,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             if(!hProc) break;
             BYTE old_code[] = {0xff, 0x15, 0x28, 0x20, 0x49, 0x00};
             BYTE code[] = {0x83, 0xc4, 0x14, 0x90, 0x90, 0x90};
-            WriteProcessMemory(hProc, (void*)0x482ab4, bShowMe ? old_code : code, sizeof(code), nullptr);
+            /* 获取起始地址 */
+            HMODULE hModule = NULL;
+            DWORD dwRet = 0;
+            EnumProcessModules(hProc, &hModule, sizeof(hModule), &dwRet);
+            WriteProcessMemory(hProc, (void*)((DWORD)hModule + 0x2ab4), bShowMe ? old_code : code, sizeof(code), nullptr);
             int flag = bShowMe ? MF_UNCHECKED : MF_CHECKED;
             CheckMenuItem(hMenu, IDM_SHOWME, MF_BYCOMMAND | flag);
             bShowMe = !bShowMe;

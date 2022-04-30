@@ -4,14 +4,16 @@
 
 extern int start_time;
 extern bool b5Test, bDLLSuccess;
+extern PVOID pData, pData2;
 HWND hResText, hTimeText;
-HWND hReplay[3], hBtnReplay;
+HWND hReplay[3], hBtnReplay, hBtnSave;
 int test_cnt = 0;
 void EndResult(HWND hDlg) {
     if(!hReplay[0]) return;
     for(HWND& h : hReplay)
         ShowWindow(h, SW_HIDE);
     ShowWindow(hBtnReplay, SW_SHOW);
+    ShowWindow(hBtnSave, SW_SHOW);
 }
 bool UpdateResult(HWND hDlg, int sec, int tcnt) {
     if(test_cnt - tcnt > 1) return false;
@@ -47,6 +49,25 @@ bool UpdateResult(HWND hDlg, int sec, int tcnt) {
     }
     return flg;
 }
+void SaveData() {
+    std::ofstream fout("data.out");
+    DWORD* pTop = read_memory<DWORD*>(0x700014);
+    for(DWORD* p = (DWORD*)pData; p < pTop; ++p) {
+        DWORD d = read_memory<DWORD>(p);
+        if(d < 10000) fout << d << '\n';
+        else fout << *(float*)&d << '\n';
+    }
+    fout.close();
+}
+void SaveData2() {
+    std::ofstream fout("data2.out");
+    DWORD* pTop = (DWORD*)((BYTE*)pData2 + read_memory<int>(0x700050));
+    for(DWORD* p = (DWORD*)pData2; p < pTop; ++p) {
+        DWORD d = read_memory<DWORD>(p);
+        fout << std::hex << d << '\n';
+    }
+    fout.close();
+}
 BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
     switch(Message) {
@@ -60,7 +81,9 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
             hReplay[1] = CreateWindow("button", "失败终止", WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON, 10, 172, 150, 25, hDlg, (HMENU)ID_LOSEREPLAY, hInst, NULL);
             hReplay[2] = CreateWindow("button", "成功终止", WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON, 10, 199, 150, 25, hDlg, (HMENU)ID_WINREPLAY, hInst, NULL);
             hBtnReplay = CreateWindow("button", "回放", WS_VISIBLE | WS_CHILD, 10, 145, 50, 25, hDlg, (HMENU)ID_BTNREPLAY, hInst, NULL);
+            // hBtnSave = CreateWindow("button", "导出", WS_VISIBLE | WS_CHILD, 65, 145, 50, 25, hDlg, (HMENU)ID_BTNSAVE, hInst, NULL);
             ShowWindow(hBtnReplay, SW_HIDE);
+            ShowWindow(hBtnSave, SW_HIDE);
             SendMessage(hReplay[0], BM_SETCHECK, 1, 0);
         }
         hTimeText = CreateWindow("edit", "", WS_VISIBLE | WS_CHILD | ES_READONLY, 10, 60, 200, 20, hDlg, NULL, hInst, NULL);
@@ -117,8 +140,11 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
             write_memory<BYTE>(2, 0x70001d);
             break;
         case ID_BTNREPLAY:
-            DestroyWindow(hBtnReplay);
-            write_memory<BYTE>(2, 0x70001c);   // flag_data
+            // EnableWindow(hBtnReplay, false);
+            write_memory<DWORD>(0, 0x700050);
+            write_memory<void*>(pData, 0x700020);
+            write_memory<BYTE>(1, 0x6a9ec0, 0x814);
+            write_memory<BYTE>(3, 0x70001c);   // flag_data
             write_memory<BYTE>(1, 0x700001);   // flag_start
             write_memory<BYTE>(1, 0x700000);   // flag
             write_memory<BYTE>(0, 0x700002);   // flag_state
@@ -126,6 +152,10 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
             write_memory<DWORD>(0, 0x700004);  // cur_count
             write_memory<DWORD>(1, 0x6ffff4);  // count_max
             write_memory<DWORD>(0x23b562e9, 0x415b29);  // 跳转
+            break;
+        case ID_BTNSAVE:
+            SaveData();
+            SaveData2();
             break;
         }
         break;

@@ -48,4 +48,4 @@ void* AllocMemory(int size);
 
 extern LPCSTR str_help, str_help5, str_char, str_about;
 
-#define VERSION "v1.4.0"
+#define VERSION "v1.4.1"
