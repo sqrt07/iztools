@@ -15,6 +15,7 @@
 #define ID_WINREPLAY		108
 #define ID_BTNREPLAY		109
 #define ID_BTNSAVE			110
+#define ID_BTNLOAD			111
 
 #define IDD_ROWS			201
 #define ID_MODIFYROWS		202
@@ -39,6 +40,7 @@
 #define IDM_DATA			913
 #define IDM_SHOWME			914
 #define IDM_FREEPLANTING	915
+#define IDM_SHOWPLANTS		916
 
 #define IDR_CODE			1001
 #define IDR_CODE5			1002

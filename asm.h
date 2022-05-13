@@ -422,6 +422,7 @@ class GAMEPTR {
         using ITEMBASE::ITEMBASE;
         // 以下函数命名与CVP保持一致
         MEMORY<DWORD> col() const { return get(0x28); } // 从0开始
+        MEMORY<DWORD> state() const { return get(0x3c); }
         MEMORY<DWORD> hp() const { return get(0x40); }
         MEMORY<DWORD> propCountdown() const { return get(0x54); }
         MEMORY<DWORD> attackCountdown() const { return get(0x58); }

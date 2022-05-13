@@ -262,7 +262,7 @@ bool Start5Test() {
         write_memory<BYTE>(0xe8, ptr);
         write_memory<DWORD>(pjmp - ptr - 5, ptr + 1);
     }
-    // 普僵顺拐/正常, 136-150, 0-150, 玉米/黄油, mj生成伴舞决定伴舞出土时间, 濒死僵尸随机减血, 0x51676d
+    // 普僵顺拐/正常, 136-150, 0-150, 玉米/黄油, mj生成伴舞决定伴舞出土时间, 濒死僵尸随机减血
     for(DWORD ptr : {0x52f3d4, 0x45f8ba, 0x45dee2, 0x45f1e5, 0x52b53b}) {
         write_memory<BYTE>(0xe8, ptr);
         write_memory<DWORD>(pjmp2 - ptr - 5, ptr + 1);
