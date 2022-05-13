@@ -46,6 +46,9 @@ class COMPARE;
 class INJECTOR {
     std::vector<BYTE> code;
 
+    static bool is_byte(long long x) {
+        return x >= -128ll && x <= 127ll;
+    }
    public:
     int len() const { return code.size(); }
     void clear() { code.clear(); }
@@ -103,7 +106,7 @@ class INJECTOR {
     INJECTOR& mov(PREG<DWORD> pr, REG r) {  // mov dword ptr[pr + offset], r
         add_byte(0x89);
         if(pr.off == 0) return add_byte(r * 8 + pr.r);
-        else if((signed char)pr.off == pr.off)
+        else if(is_byte(pr.off))
             return add_byte(0x40 + r * 8 + pr.r).add_byte(pr.off);
         else return add_byte(0x80 + r * 8 + pr.r).add_dword(pr.off);
     }
@@ -111,17 +114,17 @@ class INJECTOR {
         return add_byte(0x01).add_byte(0xc0 + r2 * 8 + r);
     }
     INJECTOR& add(REG r, DWORD c) {  // add r, c
-        if((signed char)c == c) return add_byte(0x83).add_byte(0xc0 + r).add_byte(c);
+        if(is_byte(c)) return add_byte(0x83).add_byte(0xc0 + r).add_byte(c);
         if(r == EAX) add_byte(0x05);
         else add_byte(0x81).add_byte(0xc0 + r);
         return add_dword(c);
     }
     INJECTOR& add(DWORD* p, DWORD c) {  // add dword ptr[p], c
-        if((signed char)c == c) return add_word(0x0583).add_ptr(p).add_byte(c);
+        if(is_byte(c)) return add_word(0x0583).add_ptr(p).add_byte(c);
         else return add_word(0x0581).add_ptr(p).add_dword(c);
     }
     INJECTOR& sub(REG r, DWORD c) {  // sub r, c
-        if((signed char)c == c) return add_byte(0x83).add_byte(0xe8 + r).add_byte(c);
+        if(is_byte(c)) return add_byte(0x83).add_byte(0xe8 + r).add_byte(c);
         if(r == EAX) add_byte(0x2d);
         else add_byte(0x81).add_byte(0xe8 + r);
         return add_dword(c);
@@ -217,13 +220,13 @@ class INJECTOR {
               .pop(EAX);
     }
     INJECTOR& cond_jmp(CONDJMP code, DWORD addr) {
-        if((signed char)addr == addr)
+        if(is_byte(addr))
             return add_byte(0x70 + code).add_byte(addr);
         else
             return add_byte(0x0f).add_byte(0x80 + code).add_dword(addr);
     }
     INJECTOR& jmp(DWORD addr) {
-        if((signed char)addr == addr)
+        if(is_byte(addr))
             return add_byte(0xeb).add_byte(addr);
         else
             return add_byte(0xe9).add_dword(addr);

@@ -23,7 +23,7 @@ HWND hCountInput, hKeyPlantInput;
 const char* countMax = "1000";
 const char* keyPlant = "1";
 
-bool bSpeed = true, bHalfSpeed = false, bNoInject = false;
+bool bSpeed = true, bHalfSpeed = false, bNoInject = false, bDelay460 = false;
 bool bRunning = false;
 bool b5Test = false, bDLL = false, bDelayInf = false, bVBECard = false;
 bool bShowMe = false, bFreePlanting = false, bVBEShowPlants = false;
@@ -148,6 +148,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             int flag = bDelayInf ? MF_UNCHECKED : MF_CHECKED;
             CheckMenuItem(hMenu, IDM_DELAYINF, MF_BYCOMMAND | flag);
             bDelayInf = !bDelayInf;
+            break;
+        }
+        case IDM_DELAY460: {
+            int flag = bDelay460 ? MF_UNCHECKED : MF_CHECKED;
+            CheckMenuItem(hMenu, IDM_DELAY460, MF_BYCOMMAND | flag);
+            bDelay460 = !bDelay460;
             break;
         }
         case IDM_NOINJECT: {

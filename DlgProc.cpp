@@ -8,7 +8,7 @@ extern PVOID pData, pData2;
 HWND hResText, hTimeText;
 HWND hReplay[3], hBtnReplay, hBtnSave, hBtnLoad;
 int test_cnt = 0;
-void EndResult(HWND hDlg) {
+void EndResult() {
     if(!hReplay[0]) return;
     for(HWND& h : hReplay)
         ShowWindow(h, SW_HIDE);
@@ -37,7 +37,7 @@ bool UpdateResult(HWND hDlg, int sec, int tcnt) {
         tm = read_memory<DWORD>(0x6ffff8);
         sprintf(s, "平均速度：%.2lf", (tm - start_time) / (double)(sec * 100));
         SetWindowText(hTimeText, s);
-        EndResult(hDlg);
+        EndResult();
     } else {
         SetWindowText(hResText, s);
         sprintf(s, "Running... (%ds)", sec);

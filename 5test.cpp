@@ -6,7 +6,7 @@ void InjectCode(int resID);
 extern HWND hCountInput, h5TestInput, hMjlockInput;
 
 extern int start_time;
-extern bool bSpeed, bHalfSpeed, bNoInject, bDLL;
+extern bool bSpeed, bHalfSpeed, bNoInject, bDLL, bDelay460;
 bool bDLLSuccess;
 
 PVOID pData, pCode, pCode2, pData2;
@@ -148,6 +148,31 @@ void LoadDLL(INJECTOR& Asm) {
                             .repe().stosd())
         .add(ScriptAsm);
 }
+
+inline initializer_list<DWORD> jmp_list_f = {
+    0x524b97,  // 0.23~0.37
+    0x524c3d   // 0.66~0.68
+};
+inline initializer_list<DWORD> jmp_list = {
+    0x52f3d4,  // 普僵顺拐/正常
+    0x45f8ba,  // 136~150
+    0x45dee2,  // 0~150
+    0x45f1e5,  // 玉米/黄油
+    0x52b53b   // 濒死僵尸随机减血
+};
+void WriteRndJmp(DWORD pjmp) {
+    for(DWORD ptr : jmp_list_f)
+        write_memory<DWORD>(pjmp - ptr - 5, ptr + 1);
+    for(DWORD ptr : jmp_list)
+        write_memory<DWORD>(pjmp - ptr, ptr + 1);
+}
+void ClearRndJmp() {
+    for(DWORD ptr : jmp_list_f)
+        write_memory(0x511cb0 - ptr - 5, ptr + 1);
+    for(DWORD ptr : jmp_list)
+        write_memory(0x5af400 - ptr - 5, ptr + 1);
+}
+
 bool Start5Test() {
     INJECTOR Asm, Asm2;
     gp.init();
@@ -164,6 +189,7 @@ bool Start5Test() {
             .if_jmp(jne, Asm2);
     }
     for(int i = 0; i < args.ZombieCnt; i++) {
+        if(bDelay460) args.ZombieTime[i] += 460;
         Asm.cmp(gp.myclock, args.ZombieTime[i])
             .if_jmp(jne, INJECTOR()
                              .use_card(args.ZombieRow[i], args.ZombieCol[i], args.ZombieType[i]));
@@ -251,22 +277,13 @@ bool Start5Test() {
     Asm.write(pCode);
     Asm2.write(pCode2);
 
-    const DWORD pjmp = 0x401872, pjmp2 = pjmp + 5;
+    const DWORD pjmp = 0x401872;
     Asm.clear();
     Asm.add_byte(0xe9).add_dword((DWORD)pCode - pjmp - 5);
-    Asm.add_byte(0xe9).add_dword((DWORD)pCode2 - pjmp2 - 5);
+    Asm.add_byte(0xe9).add_dword((DWORD)pCode2 - pjmp - 10);
     Asm.write((void*)pjmp);
 
-    // 0.23-0.37, 0.66-0.68
-    for(DWORD ptr : {0x524b97, 0x524c3d}) {
-        write_memory<BYTE>(0xe8, ptr);
-        write_memory<DWORD>(pjmp - ptr - 5, ptr + 1);
-    }
-    // 普僵顺拐/正常, 136-150, 0-150, 玉米/黄油, mj生成伴舞决定伴舞出土时间, 濒死僵尸随机减血
-    for(DWORD ptr : {0x52f3d4, 0x45f8ba, 0x45dee2, 0x45f1e5, 0x52b53b}) {
-        write_memory<BYTE>(0xe8, ptr);
-        write_memory<DWORD>(pjmp2 - ptr - 5, ptr + 1);
-    }
+    WriteRndJmp(pjmp);
 
     // 加速
     write_memory<BYTE>(0, 0x6a66f4);

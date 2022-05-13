@@ -41,6 +41,7 @@
 #define IDM_SHOWME			914
 #define IDM_FREEPLANTING	915
 #define IDM_SHOWPLANTS		916
+#define IDM_DELAY460		917
 
 #define IDR_CODE			1001
 #define IDR_CODE5			1002

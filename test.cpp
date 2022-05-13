@@ -1,6 +1,7 @@
 #include "iztools.h"
 
 void InjectCode(int resID);
+void ClearRndJmp();
 
 HANDLE hGameProcess = NULL;
 HWND hGameWindow = NULL;
@@ -187,5 +188,9 @@ void EndTest(bool flag) {
         if(Result) Result();
         FreeLibrary(hDLL);
         hDLL = nullptr;
+    }
+
+    if(!flag) {
+        ClearRndJmp();
     }
 }
