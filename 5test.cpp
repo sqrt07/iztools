@@ -98,6 +98,7 @@ bool ReadTestStr(const char* input_str) {
         args.KeyRow[i] = p.x;
         args.KeyCol[i] = p.y;
     }
+    args.CardTime = 0;
     for(int i = 0; i < args.ZombieCnt; i++) {
         if(m_z.count(v2[i]) == 0) return false;
         args.ZombieType[i] = m_z[v2[i]];
@@ -112,8 +113,9 @@ bool ReadTestStr(const char* input_str) {
         }
         args.ZombieRow[i] = p.x;
         args.ZombieCol[i] = p.y;
+        if(args.ZombieTime[i] > args.CardTime)
+            args.CardTime = args.ZombieTime[i];
     }
-    args.CardTime = args.ZombieTime[args.ZombieCnt - 1];
     for(int i = 0; i < args.KeyCnt; i++) {
         args.KeyRow[i]--;
         args.KeyCol[i]--;
@@ -154,11 +156,13 @@ inline initializer_list<DWORD> jmp_list_f = {
     0x524c3d   // 0.66~0.68
 };
 inline initializer_list<DWORD> jmp_list = {
-    0x52f3d4,  // 普僵顺拐/正常
-    0x45f8ba,  // 136~150
     0x45dee2,  // 0~150
+    0x45e66f,  // 小喷横向偏移
     0x45f1e5,  // 玉米/黄油
-    0x52b53b   // 濒死僵尸随机减血
+    0x45f8ba,  // 136~150
+    0x5234fe,  // 舞王滑步时长（300~311）
+    0x52b53b,  // 濒死僵尸随机减血（1/5概率减1）
+    0x52f3d4   // 普僵顺拐/正常
 };
 void WriteRndJmp(DWORD pjmp) {
     for(DWORD ptr : jmp_list_f)

@@ -1,6 +1,7 @@
 #include "iztools.h"
 
 #include <mingw.std.thread.h> // <thread>
+void ClearRndJmp();
 
 extern int start_time;
 extern bool b5Test, bDLLSuccess;
@@ -122,6 +123,7 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
             } else {
                 EndTest(true);
             }
+            ClearRndJmp();
             break;
         case ID_CPYRES: {
             char s[32];
