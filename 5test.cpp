@@ -153,7 +153,8 @@ void LoadDLL(INJECTOR& Asm) {
 
 inline initializer_list<DWORD> jmp_list_f = {
     0x524b97,  // 0.23~0.37
-    0x524c3d   // 0.66~0.68
+    0x524c3d,  // 0.66~0.68
+    0x524c14   // 0.79~0.81
 };
 inline initializer_list<DWORD> jmp_list = {
     0x45dee2,  // 0~150
