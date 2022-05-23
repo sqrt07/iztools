@@ -123,7 +123,7 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
             } else {
                 EndTest(true);
             }
-            ClearRndJmp();
+            if(b5Test) ClearRndJmp();
             break;
         case ID_CPYRES: {
             char s[32];
