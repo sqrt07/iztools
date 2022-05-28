@@ -389,14 +389,20 @@ class GAMEPTR {
                 sout << "[" << x << "] = " << (*this + x)->read() << '\n';
             MessageBox(nullptr, sout.str().c_str(), "data", MB_ICONINFORMATION);
         }
-        void log(const char* filename = "log.txt", bool bfloat = false, int prec = 6) const {
+        void log(const char* filename = "log.txt", bool bfloat = false, int prec = 6, int nl = 1) const {
             std::ios::sync_with_stdio(false);
             std::ofstream fout(filename);
             if(bfloat) fout.precision(prec);
             DWORD* pend = (DWORD*)read_memory(p_mylog - 1);
-            for(DWORD* p = p_mylog; p < pend; ++p)
-                if(!bfloat) fout << read_memory(p) << '\n';
-                else fout << read_memory((float*)p) << '\n';
+            int cnt = 0;
+            for(DWORD* p = p_mylog; p < pend; ++p){
+                if(!bfloat) fout << read_memory(p);
+                else fout << read_memory((float*)p);
+                if(++cnt == nl) {
+                    cnt = 0;
+                    fout << '\n';
+                } else fout << ' ';
+            }
             fout.close();
         }
     };

@@ -31,7 +31,7 @@ void Script(INJECTOR& Asm) {
                $.use_card(3, 6, Zombie("cg"))
     );
     Asm.event1(game.zombies.cnt() == 2 && game.zombies[1].slowCountdown() != 0,
-               $.lose().inc(game.mydata[0])
+               $.lose().inc(game.data[0])
     ); // 记录撑杆被减速的次数
 
     // 【示例5】.1t.. 路障垫鬼  // 仅用于测试浮点数比较
@@ -42,5 +42,5 @@ void Script(INJECTOR& Asm) {
 
 // Result函数在测试结束时执行一次
 void Result() {
-    game.mydata.show();
+    game.data.show();
 }

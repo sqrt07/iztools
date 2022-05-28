@@ -199,6 +199,7 @@ bool Start5Test() {
             .if_jmp(jne, INJECTOR()
                              .use_card(args.ZombieRow[i], args.ZombieCol[i], args.ZombieType[i]));
     }
+    if(bDelay460) args.CardTime += 460;
     Asm.write((void*)0x651800);
     Asm.clear();
     
