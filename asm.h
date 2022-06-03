@@ -393,15 +393,17 @@ class GAMEPTR {
             std::ios::sync_with_stdio(false);
             std::ofstream fout(filename);
             if(bfloat) fout.precision(prec);
+            fout.setf(std::ios::left);
             DWORD* pend = (DWORD*)read_memory(p_mylog - 1);
             int cnt = 0;
             for(DWORD* p = p_mylog; p < pend; ++p){
+                fout.width(30);
                 if(!bfloat) fout << read_memory(p);
                 else fout << read_memory((float*)p);
                 if(++cnt == nl) {
                     cnt = 0;
                     fout << '\n';
-                } else fout << ' ';
+                }
             }
             fout.close();
         }

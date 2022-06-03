@@ -23,10 +23,9 @@ HWND hCountInput, hKeyPlantInput;
 const char* countMax = "1000";
 const char* keyPlant = "1";
 
-bool bSpeed = true, bHalfSpeed = false, bNoInject = false, bDelay460 = false;
-bool bRunning = false;
-bool b5Test = false, bDLL = false, bDelayInf = false, bVBECard = false;
-bool bShowMe = false, bFreePlanting = false, bVBEShowPlants = false;
+bool bSpeed = true, bHalfSpeed, bNoInject, bDelay460, bRunning;
+bool b5Test, bDLL, bDelayInf, bShowMe, bFreePlanting;
+bool bVBECard, bVBNoRepeater, bVBEShowPlants;
 
 BOOL CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK RowsDlgProc(HWND, UINT, WPARAM, LPARAM);
@@ -176,6 +175,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             CheckMenuItem(hMenu, IDM_SHOWPLANTS, MF_BYCOMMAND | flag);
             bVBEShowPlants = !bVBEShowPlants;
             write_memory<BYTE>(bVBEShowPlants ? 19 : 2, 0x4294de);
+            break;
+        }
+        case IDM_VBNOREPEATER: {
+             if(!Prepare(hWnd)) break;
+            int flag = bVBNoRepeater ? MF_UNCHECKED : MF_CHECKED;
+            CheckMenuItem(hMenu, IDM_VBNOREPEATER, MF_BYCOMMAND | flag);
+            bVBNoRepeater = !bVBNoRepeater;
+            write_memory<BYTE>(bVBNoRepeater ? 37 : 52, 0x4293d8);
             break;
         }
         case IDM_SHOWME: {

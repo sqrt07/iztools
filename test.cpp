@@ -41,6 +41,8 @@ bool ReadEditText() {
             continue;
         }
         int t = FindPlantInMap(str);
+        if(t == FindPlantInMap("5") || t == FindPlantInMap("3"))
+            return false;
         if(t == -1) return false;
         plants_type[i] = t;
     }

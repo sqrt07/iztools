@@ -101,7 +101,7 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
             SendMessage(hReplay[0], BM_SETCHECK, 1, 0);
         }
         hTimeText = CreateWindow("edit", "", WS_VISIBLE | WS_CHILD | ES_READONLY, 10, 60, 200, 20, hDlg, NULL, hInst, NULL);
-        if(bDLLSuccess)
+        if(b5Test && bDLLSuccess)
             CreateWindow("static", "DLLº”‘ÿ≥…π¶", WS_VISIBLE | WS_CHILD, 10, 115, 120, 25, hDlg, 0, hInst, NULL);
         hFont = CreateFont(20, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 32, "Microsoft YaHei");
         EnumChildWindows(hDlg, SetChildWndFont, (LPARAM)hFont);
