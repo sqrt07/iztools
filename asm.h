@@ -200,6 +200,9 @@ class INJECTOR {
     INJECTOR& lose() {
         return mov((BYTE*)0x700002, 1);
     }
+    INJECTOR& log_clear() {
+        return mov(p_mylog - 1, (DWORD)p_mylog);
+    }
     INJECTOR& log(REG r) {
         return push(EDI)
               .mov(EDI, p_mylog - 1)

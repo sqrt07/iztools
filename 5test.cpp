@@ -154,7 +154,8 @@ void LoadDLL(INJECTOR& Asm) {
 inline initializer_list<DWORD> jmp_list_f = {
     0x524b97,  // 0.23~0.37
     0x524c3d,  // 0.66~0.68
-    0x524c14   // 0.79~0.81
+    0x524c14,  // 0.79~0.81
+    0x53347a,  // 僵尸死亡动画
 };
 inline initializer_list<DWORD> jmp_list = {
     0x45dee2,  // 0~150
@@ -163,7 +164,8 @@ inline initializer_list<DWORD> jmp_list = {
     0x45f8ba,  // 136~150
     0x5234fe,  // 舞王滑步时长（300~311）
     0x52b53b,  // 濒死僵尸随机减血（1/5概率减1）
-    0x52f3d4   // 普僵顺拐/正常
+    0x52f3d4,  // 普僵顺拐/正常
+    0x5334a2,  // 僵尸超长死亡（1/100）
 };
 void WriteRndJmp(DWORD pjmp) {
     for(DWORD ptr : jmp_list_f)
