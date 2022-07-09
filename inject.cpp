@@ -20,3 +20,7 @@ void* AllocMemory(int size) {
     void* p = VirtualAllocEx(hGameProcess, NULL, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     return p;
 }
+void FreeMemory(void*& p) {
+    if(p) VirtualFreeEx(hGameProcess, p, 0, MEM_RELEASE);
+    p = nullptr;
+}

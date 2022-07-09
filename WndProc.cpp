@@ -26,10 +26,15 @@ const char* keyPlant = "1";
 bool bSpeed = true, bHalfSpeed, bNoInject, bDelay460, bRunning;
 bool b5Test, bDLL, bDelayInf, bShowMe, bFreePlanting;
 bool bVBECard, bVBNoRepeater, bVBEShowPlants;
+bool bCollector;
+
+extern PVOID pCodeCollect;
 
 BOOL CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK RowsDlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK DataDlgProc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK RecDlgProc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK RepDlgProc(HWND, UINT, WPARAM, LPARAM);
 bool ReadEditText();
 bool Prepare(HWND hWnd, bool gameui = true);
 void GetString(char*);
@@ -232,6 +237,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             EnableMenuItem(hMenu, IDM_DATA, MF_BYCOMMAND | MF_DISABLED);
             CreateDialog(hInst, MAKEINTRESOURCE(IDD_DATA), hWnd, (DLGPROC)DataDlgProc);
             break;
+        case IDM_COLLECTOR: {
+            if(!Prepare(hWnd)) break;
+            int flag = bCollector ? MF_UNCHECKED : MF_CHECKED;
+            CheckMenuItem(hMenu, IDM_COLLECTOR, MF_BYCOMMAND | flag);
+            bCollector = !bCollector;
+            write_memory<BYTE>(bCollector, 0x70001f);
+            break;
+        }
+        case IDM_RECORD:
+            if(!Prepare(hWnd)) break;
+            write_memory<BYTE>(1, 0x70001f);
+            DialogBox(hInst, MAKEINTRESOURCE(IDD_RECORD), hWnd, (DLGPROC)RecDlgProc);
+            write_memory<BYTE>(bCollector, 0x70001f);
+            break;
+        case IDM_REPLAY:
+            if(!Prepare(hWnd)) break;
+            write_memory<BYTE>(1, 0x70001f);
+            DialogBox(hInst, MAKEINTRESOURCE(IDD_REPLAY), hWnd, (DLGPROC)RepDlgProc);
+            write_memory<BYTE>(bCollector, 0x70001f);
+            break;
         case ID_5TEST:
             for(HWND h : {hPlantBox, hZombieBox, hTextKeyPlant, hKeyPlantInput, hBtnClear, hBtnDefault})
                 ShowWindow(h, b5Test ? SW_SHOW : SW_HIDE);
@@ -271,6 +296,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         break;
     case WM_CLOSE:
     case WM_DESTROY:
+        write_code({0x8b, 0x8c, 0x24, 0x14, 0x01, 0x00, 0x00}, 0x416064);
+        FreeMemory(pCodeCollect);
         PostQuitMessage(0);
         break;
     default:

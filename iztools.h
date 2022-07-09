@@ -1,9 +1,12 @@
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <direct.h>
 #include <map>
 #include <sstream>
 #include <string>
@@ -45,7 +48,8 @@ struct Args {
 };
 
 void* AllocMemory(int size);
+void FreeMemory(void*& p);
 
 extern LPCSTR str_help, str_help5, str_char, str_about;
 
-#define VERSION "v1.4.9"
+#define VERSION "v1.5.0"

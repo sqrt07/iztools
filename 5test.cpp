@@ -9,7 +9,7 @@ extern int start_time;
 extern bool bSpeed, bHalfSpeed, bNoInject, bDLL, bDelay460;
 bool bDLLSuccess;
 
-PVOID pData, pCode, pCode2, pData2;
+PVOID pData, pCode, pCode2;
 
 Args args;
 HMODULE hDLL;
@@ -166,6 +166,9 @@ inline initializer_list<DWORD> jmp_list = {
     0x52b53b,  // ±ôËÀ½©Ê¬Ëæ»ú¼õÑª£¨1/5¸ÅÂÊ¼õ1£©
     0x52f3d4,  // ÆÕ½©Ë³¹Õ/Õý³£
     0x5334a2,  // ½©Ê¬³¬³¤ËÀÍö£¨1/100£©
+    0x42a7fa, 0x42af4b, 0x42afa6, 0x42b019, 0x42b05b, 0x42b0e1, // Ëæ»úÉú³ÉÕóÐÍ
+    0x407eef, 0x407efb, 0x407f0e,
+    0x40dabb
 };
 void WriteRndJmp(DWORD pjmp) {
     for(DWORD ptr : jmp_list_f)
@@ -178,6 +181,63 @@ void ClearRndJmp() {
         write_memory(0x511cb0 - ptr - 5, ptr + 1);
     for(DWORD ptr : jmp_list)
         write_memory(0x5af400 - ptr - 5, ptr + 1);
+}
+
+void InjectRndRec() {
+    INJECTOR Asm, Asm2;
+    // rnd_float
+    Asm.add_word(0x058f).add_dword(0x6ffffc) // pop [6ffffc]
+        .mov((DWORD*)0x700018, EDI)
+        .call(0x511cb0) // r_rnd_jieduan_f
+        .add_word(0x35ff).add_dword(0x6ffffc) // push [6ffffc]
+        .cmp((BYTE*)0x70001c, 1)
+        .if_jmp(EQUAL, INJECTOR()
+                           .mov(EDI, (DWORD*)0x700014)
+                           .add_word(0x17d9) // fst [edi]
+                           .add(EDI, 4)
+                           .mov((DWORD*)0x700014, EDI))
+        .cmp((BYTE*)0x70001c, 2)
+        .if_jmp(EQUAL, INJECTOR()
+                           .mov(EDI, (DWORD*)0x700020)
+                           .cmp(EDI, (DWORD*)0x700014)
+                           .if_jmp(BELOW, INJECTOR()
+                                              .add_word(0xd8dd) // fstp st(0)
+                                              .add_word(0x07d9) // fld [edi]
+                                              .add(EDI, 4)
+                                              .mov((DWORD*)0x700020, EDI)))
+        .mov(EDI, (DWORD*)0x700018);
+    
+    // rnd_int
+    Asm2.mov((DWORD*)0x700018, EDI)
+        .call(0x5af400)
+        .cmp((BYTE*)0x70001c, 1)
+        .if_jmp(EQUAL, INJECTOR()
+                           .mov(EDI, (DWORD*)0x700014)
+                           .mov(PEDI, EAX)
+                           .add(EDI, 4)
+                           .mov((DWORD*)0x700014, EDI))
+        .cmp((BYTE*)0x70001c, 2)
+        .if_jmp(EQUAL, INJECTOR()
+                           .mov(EDI, (DWORD*)0x700020)
+                           .cmp(EDI, (DWORD*)0x700014)
+                           .if_jmp(BELOW, INJECTOR()
+                                              .add_word(0x078b) // mov eax, [edi]
+                                              .add(EDI, 4)
+                                              .mov((DWORD*)0x700020, EDI)))
+        .mov(EDI, (DWORD*)0x700018);
+
+    pCode = AllocMemory(Asm.len() + 1);
+    pCode2 = AllocMemory(Asm2.len() + 1);
+    Asm.write(pCode);
+    Asm2.write(pCode2);
+
+    const DWORD pjmp = 0x401872;
+    Asm.clear();
+    Asm.add_byte(0xe9).add_dword((DWORD)pCode - pjmp - 5);
+    Asm.add_byte(0xe9).add_dword((DWORD)pCode2 - pjmp - 10);
+    Asm.write((void*)pjmp);
+
+    WriteRndJmp(pjmp);
 }
 
 bool Start5Test() {
@@ -216,83 +276,10 @@ bool Start5Test() {
     
     Asm.write((void*)0x651b00);  // ret
 
-    pData = AllocMemory(204800);
-    pData2 = AllocMemory(204800);
+    pData = AllocMemory(120 * 1024);
     write_memory<void*>(pData, 0x700020); // p_data
-    write_memory<DWORD>(0, 0x700050);
-
-    Asm.clear(); // rnd_float
-    Asm.add_word(0x058f).add_dword(0x6ffffc) // pop [6ffffc]
-        .mov((DWORD*)0x700018, EDI)
-        .call(0x511cb0) // r_rnd_jieduan_f
-        .add_word(0x35ff).add_dword(0x6ffffc) // push [6ffffc]
-        .cmp((BYTE*)0x70001c, 0)
-        .if_jmp(ABOVE, INJECTOR()
-                           .push(EAX)
-                           .mov(EAX, (DWORD*)0x6ffffc)
-                           .mov(EDI, (DWORD*)0x700050)
-                           .mov(PEDI + (int)pData2, EAX)
-                           .add(EDI, 4)
-                           .mov((DWORD*)0x700050, EDI)
-                           .pop(EAX))
-        .cmp((BYTE*)0x70001c, 1)
-        .if_jmp(EQUAL, INJECTOR()
-                           .mov(EDI, (DWORD*)0x700014)
-                           .add_word(0x17d9) // fst [edi]
-                           .add(EDI, 4)
-                           .mov((DWORD*)0x700014, EDI))
-        .cmp((BYTE*)0x70001c, 2)
-        .if_jmp(EQUAL, INJECTOR()
-                           .mov(EDI, (DWORD*)0x700020)
-                           .cmp(EDI, (DWORD*)0x700014)
-                           .if_jmp(BELOW, INJECTOR()
-                                              .add_word(0xd8dd) // fstp st(0)
-                                              .add_word(0x07d9) // fld [edi]
-                                              .add(EDI, 4)
-                                              .mov((DWORD*)0x700020, EDI)))
-        .mov(EDI, (DWORD*)0x700018);
+    InjectRndRec();
     
-    Asm2.clear(); // rnd_int
-    Asm2.mov((DWORD*)0x700018, EDI)
-        .call(0x5af400)
-        .cmp((BYTE*)0x70001c, 0)
-        .if_jmp(ABOVE, INJECTOR()
-                           .push(EAX)
-                           .add_word(0x448b).add_word(0x0424) // mov eax,[esp+4]
-                           .mov(EDI, (DWORD*)0x700050)
-                           .mov(PEDI + (int)pData2, EAX)
-                           .add(EDI, 4)
-                           .mov((DWORD*)0x700050, EDI)
-                           .pop(EAX))
-        .cmp((BYTE*)0x70001c, 1)
-        .if_jmp(EQUAL, INJECTOR()
-                           .mov(EDI, (DWORD*)0x700014)
-                           .mov(PEDI, EAX)
-                           .add(EDI, 4)
-                           .mov((DWORD*)0x700014, EDI))
-        .cmp((BYTE*)0x70001c, 2)
-        .if_jmp(EQUAL, INJECTOR()
-                           .mov(EDI, (DWORD*)0x700020)
-                           .cmp(EDI, (DWORD*)0x700014)
-                           .if_jmp(BELOW, INJECTOR()
-                                              .add_word(0x078b) // mov eax,[edi]
-                                              .add(EDI, 4)
-                                              .mov((DWORD*)0x700020, EDI)))
-        .mov(EDI, (DWORD*)0x700018);
-
-    pCode = AllocMemory(Asm.len());
-    pCode2 = AllocMemory(Asm2.len());
-    Asm.write(pCode);
-    Asm2.write(pCode2);
-
-    const DWORD pjmp = 0x401872;
-    Asm.clear();
-    Asm.add_byte(0xe9).add_dword((DWORD)pCode - pjmp - 5);
-    Asm.add_byte(0xe9).add_dword((DWORD)pCode2 - pjmp - 10);
-    Asm.write((void*)pjmp);
-
-    WriteRndJmp(pjmp);
-
     // ¼ÓËÙ
     write_memory<BYTE>(0, 0x6a66f4);
     if(bSpeed) {

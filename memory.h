@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include <initializer_list>
+#include <cstring>
 
 #ifdef SCRIPT_DLL
     static HANDLE hGameProcess;
@@ -38,4 +39,17 @@ void write_memory(T value, T* ptr, Args... args) {
 template <typename T, typename... Args>
 void write_memory(T value, int ptr, Args... args) {
     write_memory(value, (T*)ptr, args...);
+}
+
+template <int NOP = 0>
+void write_call(void* func, int ptr) {
+    BYTE code[NOP + 5];
+    memset(code, 0x90, sizeof(code));
+    code[0] = 0xe8;
+    *(int*)&code[1] = (int)func - ptr - 5;
+    WriteProcessMemory(hGameProcess, (void*)ptr, code, sizeof(code), NULL);
+}
+
+inline void write_code(const std::initializer_list<BYTE>& code, int ptr) {
+    WriteProcessMemory(hGameProcess, (void*)ptr, code.begin(), code.size(), NULL);
 }

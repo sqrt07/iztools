@@ -1,6 +1,7 @@
 #include "iztools.h"
 
 void InjectCode(int resID);
+void InjectCollector();
 
 HANDLE hGameProcess = NULL;
 HWND hGameWindow = NULL;
@@ -112,6 +113,7 @@ bool Prepare(HWND hWnd, bool gameui) {
         MessageBox(hWnd, "当前不在游戏界面。", "提示", MB_OK | MB_ICONWARNING);
         return false;
     }
+    InjectCollector();
     return true;
 }
 

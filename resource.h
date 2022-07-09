@@ -25,6 +25,10 @@
 #define ID_CHANGEDATA		206
 #define ID_DEFAULTDATA		207
 
+#define IDD_RECORD			301
+
+#define IDD_REPLAY			401
+
 #define IDM_MENU			901
 #define IDM_SPEED			902
 #define IDM_HALFSPEED		903
@@ -43,6 +47,9 @@
 #define IDM_SHOWPLANTS		916
 #define IDM_DELAY460		917
 #define IDM_VBNOREPEATER	918
+#define IDM_RECORD			919
+#define IDM_REPLAY			920
+#define IDM_COLLECTOR		921
 
 #define IDR_CODE			1001
 #define IDR_CODE5			1002

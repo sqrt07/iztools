@@ -5,10 +5,10 @@ void ClearRndJmp();
 
 extern int start_time;
 extern bool b5Test, bDLLSuccess;
-extern PVOID pData, pData2;
+extern PVOID pCode, pCode2, pData;
 HWND hResText, hTimeText;
 HWND hReplay[3], hBtnReplay, hBtnSave, hBtnLoad;
-int test_cnt = 0;
+static int test_cnt = 0;
 void EndResult() {
     if(!hReplay[0]) return;
     for(HWND& h : hReplay)
@@ -71,15 +71,6 @@ void LoadData() {
     write_memory(pTop, 0x70001c);
     fin.close();
 }
-void SaveData2() {
-    std::ofstream fout("data2.out");
-    DWORD* pTop = (DWORD*)((BYTE*)pData2 + read_memory<int>(0x700050));
-    for(DWORD* p = (DWORD*)pData2; p < pTop; ++p) {
-        DWORD d = read_memory<DWORD>(p);
-        fout << std::hex << d << '\n';
-    }
-    fout.close();
-}
 BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
     switch(Message) {
@@ -117,13 +108,18 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
         switch(LOWORD(wParam)) {
         case IDCANCEL:
             EndDialog(hDlg, LOWORD(wParam));
-            if(test_cnt % 2){
+            if(test_cnt % 2) {
                 ++test_cnt;
                 EndTest();
             } else {
                 EndTest(true);
             }
-            if(b5Test) ClearRndJmp();
+            if(b5Test){
+                ClearRndJmp();
+                FreeMemory(pCode);
+                FreeMemory(pCode2);
+                FreeMemory(pData);
+            }
             break;
         case ID_CPYRES: {
             char s[32];
@@ -170,7 +166,6 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
             break;
         case ID_BTNSAVE:
             SaveData();
-            // SaveData2();
             break;
         case ID_BTNLOAD:
             LoadData();

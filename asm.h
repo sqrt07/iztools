@@ -156,6 +156,8 @@ class INJECTOR {
         return add_word(0x3d80).add_ptr(p).add_byte(c);
     }
     INJECTOR& repe() { return add_byte(0xf3); }
+    INJECTOR& movsb() { return add_byte(0xa4); }
+    INJECTOR& movsd() { return add_byte(0xa5); }
     INJECTOR& stosd() { return add_byte(0xab); }
     /* ¸¡µãÊý */
     INJECTOR& fld(float* p) {
@@ -457,6 +459,7 @@ class GAMEPTR {
         MEMORY<DWORD> shieldHp() const { return get(0xdc); }
         MEMORY<DWORD> slowCountdown() const { return get(0xac); }
         MEMORY<BYTE> haveHead() const { return get<BYTE>(0xba); }
+        MEMORY<WORD> rank() { return get<WORD>(0x15a); }
         MEMORY<WORD> next() { return get<WORD>(0x158); }
     };
     int base, obj, plant, zombie, bullet, prog;
@@ -468,8 +471,8 @@ class GAMEPTR {
     void init() {
         base = read_memory<int>(0x6a9ec0);
         obj = read_memory<int>(base + 0x768);
-        plant = read_memory<int>(obj + 0xac);
         zombie = read_memory<int>(obj + 0x90);
+        plant = read_memory<int>(obj + 0xac);
         bullet = read_memory<int>(obj + 0xc8);
         prog = read_memory<int>(obj + 0x160);
         clock = (DWORD*)(obj + 0x5568);
