@@ -67,13 +67,13 @@ void InjectCardRec() {
                            .mov(PEAX, EBX)
                            .mov(PEAX + 0x04, ESI)
                            .mov(ESI, (DWORD*)0x6a9ec0)
-                           .add_word(0xb68b).add_dword(0x768) // mov esi, [esi+768]
-                           .add_word(0x9e8b).add_dword(0x5568) // mov ebx, [esi+5568]
+                           .mov(ESI, PESI + 0x768)
+                           .mov(EBX, PESI + 0x5568)
                            .mov(PEAX + 0x08, EBX)
-                           .add_word(0xb68b).add_dword(0x138) // mov esi, [esi+138]
-                           .add_word(0x5e8b).add_byte(0x24) // mov ebx, [esi+24]
+                           .mov(ESI, PESI + 0x138)
+                           .mov(EBX, PESI + 0x24)
                            .mov(PEAX + 0x0c, EBX)
-                           .add_word(0x5e8b).add_byte(0x28) // mov ebx, [esi+28]
+                           .mov(EBX, PESI + 0x28)
                            .mov(PEAX + 0x10, EBX)
                            .add(EAX, 0x14)
                            .mov((DWORD*)0x70002c, EAX)
@@ -90,8 +90,8 @@ void InjectPreviewRec() {
         .if_jmp(EQUAL, INJECTOR()
                            .push(ESI)
                            .mov(ESI, (DWORD*)0x6a9ec0)
-                           .add_word(0xb68b).add_dword(0x768) // mov esi, [esi+768]
-                           .add_word(0xb68b).add_dword(0x94) // mov esi, [esi+94]
+                           .mov(ESI, PESI + 0x768)
+                           .mov(ESI, PESI + 0x94)
                            .mov((DWORD*)0x700038, ESI) // preview_top (8 or 9)
                            .pop(ESI));
 
@@ -113,14 +113,14 @@ void InjectMjClockRec() {
         .if_jmp(NEQUAL, INJECTOR().ret())
         .push(EAX).push(ECX).push(EDX).push(ESI)
         .mov(ESI, (DWORD*)0x6a9ec0)
-        .add_word(0x968b).add_dword(0x838) // mov edx, [esi+838]
+        .mov(EDX, PESI + 0x838)
         .inc((DWORD*)0x70003c) // last_mjclock
         .cmp(EDX, (DWORD*)0x70003c)
         .if_jmp(NEQUAL, INJECTOR()
                             .mov(EAX, (DWORD*)0x700040) // p_data_pause_top
                             .mov(PEAX, EDX)
-                            .add_word(0xb68b).add_dword(0x768) // mov esi, [esi+768]
-                            .add_word(0x8e8b).add_dword(0x5568) // mov ecx, [esi+5568]
+                            .mov(ESI, PESI + 0x768)
+                            .mov(ECX, PESI + 0x5568)
                             .cmp(ECX, 2)
                             .if_jmp(NBELOW, INJECTOR()
                                                 .mov((DWORD*)0x70003c, EDX)
@@ -128,6 +128,26 @@ void InjectMjClockRec() {
                                                 .add(EAX, 8)
                                                 .mov((DWORD*)0x700040, EAX)))
         .pop(ESI).pop(EDX).pop(ECX).pop(EAX);
+    // 注入：提示文字显示
+    Asm.push(ESI)
+        .mov(ESI, (DWORD*)0x6a9ec0)
+        .mov(ESI, PESI + 0x768)
+        .mov(ESI, PESI + 0x5568)
+        .cmp(ESI, 0ul)
+        .if_jmp(ABOVE, INJECTOR()
+            .cmp((BYTE*)0x70004c, (BYTE)TEXTTYPE::START)
+            .if_jmp(EQUAL, INJECTOR()
+                .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::NONE)
+                .show_text("Start recording...", 400)
+            )
+            .cmp((BYTE*)0x70004c, (BYTE)TEXTTYPE::SAVE)
+            .if_jmp(EQUAL, INJECTOR()
+                .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::NONE)
+                .show_text("Video saved! Start recording...", 400)
+            )
+        )
+        .pop(ESI)
+    ;
 
     pCodeMjClock = AllocMemory(Asm.len() + 1);
     Asm.write(pCodeMjClock);
@@ -140,13 +160,10 @@ void InjectRecStart() {
 
     INJECTOR Asm;
     // 注入：重开时记录随机数
-    // Asm.mov(EAX, 5) // original code
     Asm.add_word(0xa164).add_dword(0x0) // original code
-        // .add_byte(0x8b).add_word(0x6c4f) // mov ecx, [edi+6c]
-        // .cmp(ECX, 0ul)
-        // .if_jmp(NEQUAL, INJECTOR().ret())
         .cmp((BYTE*)0x70001c, 1)
         .if_jmp(EQUAL, INJECTOR() // 保存全部记录到缓存
+                           .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::SAVE)
                            .push(ECX).push(ESI).push(EDI)
                            .mov(ECX, (DWORD*)0x700014)
                            .sub(ECX, (int)pData).push(ECX)
@@ -173,17 +190,16 @@ void InjectRecStart() {
                            .mov((DWORD*)0x70003c, -1))
         .cmp((BYTE*)0x70001e, 1)
         .if_jmp(EQUAL, INJECTOR() // 开始录制
+                           .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::START)
                            .mov((BYTE*)0x70001e, 0)
                            .mov((BYTE*)0x70001c, 1));
 
     pCodeRestart = AllocMemory(Asm.len() + 1);
     Asm.write(pCodeRestart);
-    // write_call(pCodeRestart, 0x42af46);
     write_call<1>(pCodeRestart, 0x407b57);
 }
 void InjectRecEnd() {
     write_code({0x8b, 0x85, 0x60, 0x01, 0x00, 0x00}, 0x40fdcf);
-    // write_code({0xb8, 0x05, 0x00, 0x00, 0x00}, 0x42af46);
     write_code({0x64, 0xa1, 0x00, 0x00, 0x00, 0x00}, 0x407b57);
     write_code({0x64, 0x89, 0x0d, 0x00, 0x00, 0x00, 0x00}, 0x41606f);
     write_code({0xc3, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc}, 0x40dfb0);

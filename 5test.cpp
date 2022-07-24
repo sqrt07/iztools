@@ -200,11 +200,14 @@ void InjectRndRec() {
         .if_jmp(EQUAL, INJECTOR()
                            .mov(EDI, (DWORD*)0x700020)
                            .cmp(EDI, (DWORD*)0x700014)
+                           .if_jmp(EQUAL, INJECTOR()
+                                .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::END)
+                                .mov((BYTE*)0x70001c, 0))
                            .if_jmp(BELOW, INJECTOR()
-                                              .add_word(0xd8dd) // fstp st(0)
-                                              .add_word(0x07d9) // fld [edi]
-                                              .add(EDI, 4)
-                                              .mov((DWORD*)0x700020, EDI)))
+                                .add_word(0xd8dd) // fstp st(0)
+                                .add_word(0x07d9)) // fld [edi]
+                           .add(EDI, 4)
+                           .mov((DWORD*)0x700020, EDI))
         .mov(EDI, (DWORD*)0x700018);
     
     // rnd_int
@@ -221,9 +224,12 @@ void InjectRndRec() {
                            .mov(EDI, (DWORD*)0x700020)
                            .cmp(EDI, (DWORD*)0x700014)
                            .if_jmp(BELOW, INJECTOR()
-                                              .add_word(0x078b) // mov eax, [edi]
-                                              .add(EDI, 4)
-                                              .mov((DWORD*)0x700020, EDI)))
+                                .mov(EAX, PEDI))
+                           .if_jmp(EQUAL, INJECTOR()
+                                .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::END)
+                                .mov((BYTE*)0x70001c, 0))
+                           .add(EDI, 4)
+                           .mov((DWORD*)0x700020, EDI))
         .mov(EDI, (DWORD*)0x700018);
 
     pCode = AllocMemory(Asm.len() + 1);

@@ -1,8 +1,7 @@
 /*
 1. 屏蔽操作（不着急）
-2. 提示文字、结束提示（游戏内白字）
-3. 速度条、进度条（暂缓）
-4. 僵尸Rank（不重要）
+2. 速度条、进度条（暂缓）
+3. 僵尸Rank（不重要）
 */
 
 #include "iztools.h"
@@ -71,21 +70,46 @@ bool LoadRec(HWND hWnd) {
 
 void InjectCardRep() {
     INJECTOR Asm;
+    // 注入：提示文字显示
+    Asm.push(ESI)
+        .mov(ESI, (DWORD*)0x6a9ec0)
+        .mov(ESI, PESI + 0x768)
+        .mov(ESI, PESI + 0x5568)
+        .cmp(ESI, 0ul)
+        .if_jmp(ABOVE, INJECTOR()
+            .cmp((BYTE*)0x70004c, (BYTE)TEXTTYPE::PLAY)
+            .if_jmp(EQUAL, INJECTOR()
+                .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::NONE)
+                .show_text("Start playing...", 400)
+            )
+            .cmp((BYTE*)0x70004c, (BYTE)TEXTTYPE::STOP)
+            .if_jmp(EQUAL, INJECTOR()
+                .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::NONE)
+                .show_text("Stopped.", 400)
+            )
+            .cmp((BYTE*)0x70004c, (BYTE)TEXTTYPE::END)
+            .if_jmp(EQUAL, INJECTOR()
+                .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::NONE)
+                .show_text("The video is over!", 400)
+            )
+        )
+        .pop(ESI)
+    ;
     // 注入：用卡操作、初始栈位设置、暂停操作（仅开启暂停）
     Asm.add_byte(0x64).add_word(0x0d89).add_dword(0x0) // original code
         .cmp((BYTE*)0x70001c, 2)
         .if_jmp(NEQUAL, INJECTOR().ret())
         .push(EAX).push(EBX).push(ECX).push(EDX).push(EDI).push(ESI)
         .mov(ESI, (DWORD*)0x6a9ec0)
-        .add_word(0xb68b).add_dword(0x768) // mov esi, [esi+768]
-        .add_word(0x868b).add_dword(0x5568) // mov eax, [esi+5568]
+        .mov(ESI, PESI + 0x768)
+        .mov(EAX, PESI + 0x5568)
         .cmp(EAX, 2) // 第二帧才彻底清除预览僵尸
         .if_jmp(EQUAL, INJECTOR() // 初始栈位设置
             .mov(EAX, (DWORD*)0x700038) // preview_top (8 or 9)
             .mov(PESI + 0x94, EAX) // count_max
             .add_byte(0x48) // dec eax
             .mov(PESI + 0x9c, EAX) // next
-            .add_word(0xb68b).add_dword(0x90) // mov esi, [esi+90]
+            .mov(ESI, PESI + 0x90)
             .add_byte(0x40) // inc eax
             .mov(PESI + 0x158, EAX) // zb[0].next
             .mov(EAX, 7)
@@ -94,19 +118,19 @@ void InjectCardRep() {
         .mov(EAX, (DWORD*)0x700030) // p_data_card
         .cmp(EAX, (DWORD*)0x70002c) // p_data_card_top
         .if_jmp(BELOW, INJECTOR() // 用卡操作
-            .add_word(0x488b).add_byte(0x08) // mov ecx, [eax+08]
+            .mov(ECX, PEAX + 0x08)
             .mov(ESI, (DWORD*)0x6a9ec0)
-            .add_word(0xb68b).add_dword(0x768) // mov esi, [esi+768]
-            .add_word(0x9e8b).add_dword(0x5568) // mov ebx, [esi+5568]
+            .mov(ESI, PESI + 0x768)
+            .mov(EBX, PESI + 0x5568)
             .add_word(0xcb39) // cmp ebx, ecx
             .if_jmp(NBELOW, INJECTOR() // 重现用卡操作 (x, y, time, idx, type)
                 .add_word(0x70ff).add_byte(4) // push [eax+04]
                 .add_word(0x30ff) // push [eax]
                 .push(ESI)
-                .add_word(0x488b).add_byte(0x0c) // mov ecx, [eax+0c]
-                .add_word(0xb68b).add_dword(0x138) // mov esi, [esi+138]
+                .mov(ECX, PEAX + 0x0c)
+                .mov(ESI, PESI + 0x138)
                 .mov(PESI + 0x24, ECX)
-                .add_word(0x488b).add_byte(0x10) // mov ecx, [eax+10]
+                .mov(ECX, PEAX + 0x10)
                 .mov(PESI + 0x28, ECX)
                 .mov(ECX, 1)
                 .add(EAX, 0x14)
@@ -118,13 +142,13 @@ void InjectCardRep() {
         .cmp(EAX, (DWORD*)0x700040) // p_data_pause_top
         .if_jmp(BELOW, INJECTOR()
             .mov(ESI, (DWORD*)0x6a9ec0)
-            .add_word(0xbe8b).add_dword(0x768) // mov edi, [esi+768]
-            .add_word(0xbf8b).add_dword(0x5568) // mov edi, [edi+5568]
-            .add_word(0x508b).add_byte(0x4) // mov edx, [eax+04]
+            .mov(EDI, PESI + 0x768)
+            .mov(EDI, PEDI + 0x5568)
+            .mov(EDX, PEAX + 0x04)
             .sub(EDX, 1)
             .add_word(0xfa39) // cmp edx, edi
             .if_jmp(EQUAL, INJECTOR()
-                .add_word(0x108b) // mov edx, [eax]
+                .mov(EDX, PEAX)
                 .sub(EDX, 1)
                 .mov(PESI + 0x838, EDX)
                 .add(EAX, 8)
@@ -140,22 +164,19 @@ void InjectCardRep() {
 void InjectRepStart() {
     INJECTOR Asm;
     // 注入：重开时重现随机数
-    // Asm.mov(EAX, 5) // original code
     Asm.add_word(0xa164).add_dword(0x0) // original code
-        // .add_byte(0x8b).add_word(0x6c4f) // mov ecx, [edi+6c]
-        // .cmp(ECX, 0ul)
-        // .if_jmp(NEQUAL, INJECTOR().ret())
         .cmp((BYTE*)0x70001c, 2)
         .if_jmp(EQUAL, INJECTOR() // 停止重现
+                           .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::STOP)
                            .mov((BYTE*)0x70001c, 0))
         .cmp((BYTE*)0x70001e, 2)
         .if_jmp(EQUAL, INJECTOR() // 开始重现
+                           .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::PLAY)
                            .mov((BYTE*)0x70001e, 0)
                            .mov((BYTE*)0x70001c, 2));
 
     pCodeRestart = AllocMemory(Asm.len() + 1);
     Asm.write(pCodeRestart);
-    // write_call(pCodeRestart, 0x42af46);
     write_call<1>(pCodeRestart, 0x407b57);
 }
 BOOL CALLBACK RepDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -177,6 +198,8 @@ BOOL CALLBACK RepDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
         switch(LOWORD(wParam)) {
         case IDCANCEL:
             EndDialog(hDlg, LOWORD(wParam));
+            write_memory<BYTE>((BYTE)TEXTTYPE::STOP, 0x70004c);
+            Sleep(50);
             InjectRecEnd();
             ClearRndJmp();
             FreeMemory(pCode);

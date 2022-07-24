@@ -43,6 +43,7 @@ class COMPARE;
 #define True COMPARE()
 #define zb game.zombies
 #define pl game.plants
+#define bl game.bullets
 class INJECTOR {
     std::vector<BYTE> code;
 
@@ -105,6 +106,13 @@ class INJECTOR {
     }
     INJECTOR& mov(PREG<DWORD> pr, REG r) {  // mov dword ptr[pr + offset], r
         add_byte(0x89);
+        if(pr.off == 0) return add_byte(r * 8 + pr.r);
+        else if(is_byte(pr.off))
+            return add_byte(0x40 + r * 8 + pr.r).add_byte(pr.off);
+        else return add_byte(0x80 + r * 8 + pr.r).add_dword(pr.off);
+    }
+    INJECTOR& mov(REG r, PREG<DWORD> pr) { // mov r, dword ptr[pr + offset]
+        add_byte(0x8b);
         if(pr.off == 0) return add_byte(r * 8 + pr.r);
         else if(is_byte(pr.off))
             return add_byte(0x40 + r * 8 + pr.r).add_byte(pr.off);
@@ -268,6 +276,33 @@ class INJECTOR {
     // row和col从1开始；type使用Zombie("xx")
     INJECTOR& use_card(int row, int col, int type) {
         return push(col).push(row).push(type).call(0x6510b3);
+    }
+    // 显示白字
+    INJECTOR& show_text(const std::string& text, int time) {
+        push(EAX).push(EBX).push(ECX).push(EDX).push(ESI).push(EDI);
+
+        std::string s = text;
+        s.push_back('\0');
+        while(s.length() % 4) s.push_back('\0');
+        int n = s.length();
+        for(int i = n - 4; i >= 0; i -= 4)
+            push(*(DWORD*)(s.c_str() + i));
+        mov(EAX, ESP); // 把文本存到栈上
+
+        sub(ESP, 0x100);
+        push(EAX); // Arg: 文本地址
+        mov(ECX, ESP).add(ECX, 0x50).call(0x404450);
+        mov(ESI, (DWORD*)0x6a9ec0)
+        .mov(ESI, PESI + 0x768)
+        .mov(ESI, PESI + 0x140);
+        mov(ECX, 6);
+        mov(EDX, ESP).add(EDX, 0x4c);
+        call(0x459010);
+        mov(EAX, time).mov(PESI + 0x88, EAX);
+
+        add(ESP, n + 0x100);
+        pop(EDI).pop(ESI).pop(EDX).pop(ECX).pop(EBX).pop(EAX);
+        return *this;
     }
 
     #ifndef SCRIPT_DLL
@@ -462,10 +497,23 @@ class GAMEPTR {
         MEMORY<WORD> rank() { return get<WORD>(0x15a); }
         MEMORY<WORD> next() { return get<WORD>(0x158); }
     };
+    struct BULLET : ITEMBASE {
+        using ITEMBASE::ITEMBASE;
+        // 以下函数命名与CVP保持一致
+        // MEMORY<DWORD> col() const { return get(0x28); } // 从0开始
+        // MEMORY<DWORD> state() const { return get(0x3c); }
+        // MEMORY<DWORD> hp() const { return get(0x40); }
+        // MEMORY<DWORD> propCountdown() const { return get(0x54); }
+        // MEMORY<DWORD> attackCountdown() const { return get(0x58); }
+        // MEMORY<DWORD> row() const { return get(0x88); } // 从0开始
+        // MEMORY<DWORD> shootCountdown() const { return get(0x90); }
+        // MEMORY<BYTE> isVanished() const { return get<BYTE>(0x141); }
+    };
     int base, obj, plant, zombie, bullet, prog;
     MEMORY<DWORD> clock, mjclock, myclock;
     ITEMSBASE<PLANT, 0x14c> plants;
     ITEMSBASE<ZOMBIE, 0x15c> zombies;
+    ITEMSBASE<PLANT, 0x94> bullets;
     AUTOPOINTER<DWORD> data;
     DWORD cardTime[20];
     void init() {
@@ -480,6 +528,7 @@ class GAMEPTR {
         myclock = p_myclock;
         plants = {obj + 0xac, plant};
         zombies = {obj + 0x90, zombie};
+        bullets = {obj + 0xc8, bullet};
         data = {(DWORD*)0x700900};
     }
     // 判断编号为idx的僵尸是否已经放下
@@ -496,6 +545,9 @@ class GAMEPTR {
 #undef True
 #undef zb
 #undef pl
+/* 其他 */
+enum class TEXTTYPE : BYTE { NONE, START, SAVE, PLAY, END, STOP };
+
 #else
 
 static DWORD* data_pos;
