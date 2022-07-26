@@ -12,9 +12,11 @@ using namespace chrono;
 void ClearRndJmp();
 void InjectRndRec();
 void InjectRecEnd();
+void ChangeSpeed();
+extern HWND hSpeedText;
 
 extern PVOID pCode, pCode2, pData;
-extern PVOID pCodeRestart, pCodeCard, pCodePreview;
+extern PVOID pCodeRestart, pCodeCard;
 extern PVOID pDataCard, pDataMjClock;
 
 bool LoadRec(HWND hWnd) {
@@ -30,9 +32,17 @@ bool LoadRec(HWND hWnd) {
     if(!GetOpenFileName(&ofn)) return false;
 
     ifstream fin(fn, ios::binary);
-    int preview, len; char* data;
-    fin.read((char*)&preview, sizeof(preview)); // 初始栈位载入
-    write_memory<int>(preview, 0x700038);
+    DWORD version;
+    fin.read((char*)&version, sizeof(version)); // 读取版本
+    if(version < REPVERSION) {
+        MessageBox(hWnd, "录像文件版本过低，无法识别", "读取失败", MB_ICONERROR);
+        return false;
+    }
+    if(version > REPVERSION) {
+        MessageBox(hWnd, "录像文件版本过高，无法识别", "读取失败", MB_ICONERROR);
+        return false;
+    }
+    int len; char* data;
     fin.read((char*)&len, sizeof(len)); // 随机数载入
     pData = AllocMemory(len + 5);
     write_memory<void*>(pData, 0x700020);
@@ -95,26 +105,11 @@ void InjectCardRep() {
         )
         .pop(ESI)
     ;
-    // 注入：用卡操作、初始栈位设置、暂停操作（仅开启暂停）
+    // 注入：用卡操作、暂停操作（仅开启暂停）
     Asm.add_byte(0x64).add_word(0x0d89).add_dword(0x0) // original code
         .cmp((BYTE*)0x70001c, 2)
         .if_jmp(NEQUAL, INJECTOR().ret())
         .push(EAX).push(EBX).push(ECX).push(EDX).push(EDI).push(ESI)
-        .mov(ESI, (DWORD*)0x6a9ec0)
-        .mov(ESI, PESI + 0x768)
-        .mov(EAX, PESI + 0x5568)
-        .cmp(EAX, 2) // 第二帧才彻底清除预览僵尸
-        .if_jmp(EQUAL, INJECTOR() // 初始栈位设置
-            .mov(EAX, (DWORD*)0x700038) // preview_top (8 or 9)
-            .mov(PESI + 0x94, EAX) // count_max
-            .add_byte(0x48) // dec eax
-            .mov(PESI + 0x9c, EAX) // next
-            .mov(ESI, PESI + 0x90)
-            .add_byte(0x40) // inc eax
-            .mov(PESI + 0x158, EAX) // zb[0].next
-            .mov(EAX, 7)
-            .mov(PESI + 8 * 0x15c + 0x158, EAX) // zb[8].next
-        )
         .mov(EAX, (DWORD*)0x700030) // p_data_card
         .cmp(EAX, (DWORD*)0x70002c) // p_data_card_top
         .if_jmp(BELOW, INJECTOR() // 用卡操作
@@ -193,12 +188,21 @@ BOOL CALLBACK RepDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
         InjectRndRec();
         InjectCardRep();
         InjectRepStart();
+        std::thread(ChangeSpeed).detach();
+
+        CreateWindow("static", str_replay, WS_VISIBLE | WS_CHILD, 10, 10, 280, 90, hDlg, NULL, hInst, NULL);
+        hSpeedText = CreateWindow("static", "", WS_VISIBLE | WS_CHILD, 10, 95, 280, 25, hDlg, NULL, hInst, NULL);
+        EnumChildWindows(hDlg, SetChildWndFont, (LPARAM)hFont);
         break;
     case WM_COMMAND:
         switch(LOWORD(wParam)) {
         case IDCANCEL:
             EndDialog(hDlg, LOWORD(wParam));
-            write_memory<BYTE>((BYTE)TEXTTYPE::STOP, 0x70004c);
+            {
+                int a = read_memory<DWORD>(0x700020);
+                int b = read_memory<DWORD>(0x700014);
+                if(a < b) write_memory<BYTE>((BYTE)TEXTTYPE::STOP, 0x70004c);
+            }
             Sleep(50);
             InjectRecEnd();
             ClearRndJmp();
@@ -211,6 +215,7 @@ BOOL CALLBACK RepDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
             FreeMemory(pDataMjClock);
             write_memory<BYTE>(0, 0x70001c);
             write_memory<BYTE>(0, 0x70001e);
+            write_memory<BYTE>(0, 0x6a9eab);
             break;
         }
         break;

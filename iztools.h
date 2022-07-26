@@ -3,6 +3,7 @@
 #include <fstream>
 #include <algorithm>
 #include <chrono>
+#include <commctrl.h>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -50,6 +51,7 @@ struct Args {
 void* AllocMemory(int size);
 void FreeMemory(void*& p);
 
-extern LPCSTR str_help, str_help5, str_char, str_about;
+extern LPCSTR str_help, str_help5, str_char, str_about, str_record, str_replay;
 
-#define VERSION "v1.5.1"
+#define VERSION "v1.5.2"
+#define REPVERSION 0x152

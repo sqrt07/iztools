@@ -5,12 +5,14 @@ using namespace chrono;
 #include <mingw.std.thread.h> // <thread>
 void ClearRndJmp();
 void InjectRndRec();
+void ChangeSpeed();
+HWND hSpeedText;
 
 extern PVOID pCode, pCode2, pData;
-PVOID pCodeRestart, pCodeCard, pCodePreview, pCodeMjClock;
+PVOID pCodeRestart, pCodeCard, pCodeMjClock;
 PVOID pDataCard, pDataMjClock;
 PVOID pData0, pDataCard0, pDataMjClock0; // 过完一关后的缓存区
-static int th_cnt = 0;
+static int th_cnt = 0, th_fast = 0;
 static const int len_data = 2048 * 1024; // 2M
 
 void SaveRec() {
@@ -26,8 +28,8 @@ void SaveRec() {
     string fn = dir + ("\\" + sout.str()) + ".ize";
 
     std::ofstream fout(fn, ios::binary);
-    int preview = read_memory<int>(0x700038); // 记录的初始栈位
-    fout.write((const char*)&preview, sizeof(preview));
+    DWORD version = REPVERSION; // 版本
+    fout.write((const char*)&version, sizeof(version));
     int len = read_memory<int>(0x700028); // 缓存的随机数
     char* data = new char[len];
     ReadProcessMemory(hGameProcess, pData0, data, len, NULL);
@@ -82,23 +84,6 @@ void InjectCardRec() {
     pCodeCard = AllocMemory(Asm.len() + 1);
     Asm.write(pCodeCard);
     write_call<1>(pCodeCard, 0x40fdcf);
-}
-void InjectPreviewRec() {
-    INJECTOR Asm;
-    // 注入：初始栈位记录
-    Asm.cmp((BYTE*)0x70001c, 1)
-        .if_jmp(EQUAL, INJECTOR()
-                           .push(ESI)
-                           .mov(ESI, (DWORD*)0x6a9ec0)
-                           .mov(ESI, PESI + 0x768)
-                           .mov(ESI, PESI + 0x94)
-                           .mov((DWORD*)0x700038, ESI) // preview_top (8 or 9)
-                           .pop(ESI));
-
-    pCodePreview = AllocMemory(Asm.len() + 1);
-    Asm.write(pCodePreview);
-    write_memory<BYTE>(0xc3, 0x40dfb0 + 5);
-    write_call(pCodePreview, 0x40dfb0);
 }
 void InjectMjClockRec() {
     pDataMjClock = AllocMemory(64 * 1024);
@@ -217,7 +202,6 @@ BOOL CALLBACK RecDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
         write_memory<void*>(pData, 0x700020); // p_data
         InjectRndRec();
         InjectCardRec();
-        InjectPreviewRec();
         InjectMjClockRec();
         InjectRecStart();
         std::thread([] {
@@ -230,6 +214,12 @@ BOOL CALLBACK RecDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
                 Sleep(1000);
             }
         }).detach();
+        std::thread(ChangeSpeed).detach();
+
+        CreateWindow("static", str_record, WS_VISIBLE | WS_CHILD, 10, 10, 280, 70, hDlg, NULL, hInst, NULL);
+        hSpeedText = CreateWindow("static", "", WS_VISIBLE | WS_CHILD, 10, 75, 280, 25, hDlg, NULL, hInst, NULL);
+        EnumChildWindows(hDlg, SetChildWndFont, (LPARAM)hFont);
+        SetFocus(hDlg);
         break;
     case WM_COMMAND:
         switch(LOWORD(wParam)) {
@@ -241,7 +231,6 @@ BOOL CALLBACK RecDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
             FreeMemory(pCode2);
             FreeMemory(pCodeRestart);
             FreeMemory(pCodeCard);
-            FreeMemory(pCodePreview);
             FreeMemory(pCodeMjClock);
             FreeMemory(pData);
             FreeMemory(pData0);
@@ -251,6 +240,7 @@ BOOL CALLBACK RecDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
             FreeMemory(pDataMjClock0);
             write_memory<BYTE>(0, 0x70001c);
             write_memory<BYTE>(0, 0x70001e);
+            write_memory<BYTE>(0, 0x6a9eab);
             break;
         }
         break;
@@ -258,4 +248,34 @@ BOOL CALLBACK RecDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
         return false;
     }
     return true;
+}
+
+void ChangeSpeed() {
+    const int cnt = ++th_fast;
+    while(th_fast == cnt) {
+        if(GetKeyState(VK_UP) & 0x8000) {
+            while(GetKeyState(VK_UP) & 0x8000) Sleep(10);
+            if(th_fast != cnt) break;
+            int now = read_memory<DWORD>(0x4526d3);
+            if(!read_memory<bool>(0x6a9eab)) now = 1;
+            ++now;
+            write_memory<DWORD>(now, 0x4526d3);
+            write_memory<BYTE>(1, 0x6a9eab);
+            char s[64];
+            sprintf(s, "当前速度：%d倍", now);
+            SetWindowText(hSpeedText, s);
+        }
+        else if(GetKeyState(VK_DOWN) & 0x8000) {
+            while(GetKeyState(VK_DOWN) & 0x8000) Sleep(50);
+            int now = read_memory<DWORD>(0x4526d3);
+            if(!read_memory<bool>(0x6a9eab)) now = 1;
+            if(now > 1) --now;
+            write_memory<DWORD>(now, 0x4526d3);
+            write_memory<BYTE>(1, 0x6a9eab);
+            char s[64];
+            sprintf(s, "当前速度：%d倍", now);
+            SetWindowText(hSpeedText, s);
+        }
+        Sleep(10);
+    }
 }
