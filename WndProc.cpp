@@ -26,7 +26,7 @@ const char* keyPlant = "1";
 bool bSpeed = true, bHalfSpeed, bNoInject, bDelay460, bRunning;
 bool b5Test, bDLL, bDelayInf, bShowMe, bFreePlanting;
 bool bVBECard, bVBNoRepeater, bVBEShowPlants;
-bool bCollector;
+bool bCollector, b1400Sun, b1400Warning;
 
 extern PVOID pCodeCollect;
 
@@ -257,6 +257,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
             DialogBox(hInst, MAKEINTRESOURCE(IDD_REPLAY), hWnd, (DLGPROC)RepDlgProc);
             write_memory<BYTE>(bCollector, 0x70001f);
             break;
+        case IDM_1400SUN: {
+            int flag = b1400Sun ? MF_UNCHECKED : MF_CHECKED;
+            if(!b1400Sun && !b1400Warning) {
+                b1400Warning = true;
+                int ret = MessageBox(hWnd, str_1400warning, "ÌבÊ¾", MB_YESNO | MB_ICONWARNING);
+                if(ret != IDYES) break;
+            }
+            CheckMenuItem(hMenu, IDM_1400SUN, MF_BYCOMMAND | flag);
+            b1400Sun = !b1400Sun;
+            break;
+        }
         case ID_5TEST:
             for(HWND h : {hPlantBox, hZombieBox, hTextKeyPlant, hKeyPlantInput, hBtnClear, hBtnDefault})
                 ShowWindow(h, b5Test ? SW_SHOW : SW_HIDE);

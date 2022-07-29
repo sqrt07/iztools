@@ -304,6 +304,17 @@ class INJECTOR {
         pop(EDI).pop(ESI).pop(EDX).pop(ECX).pop(EBX).pop(EAX);
         return *this;
     }
+    // row和col从1开始；type使用Plant("xx")
+    INJECTOR& new_plant(int row, int col, int type) {
+        mov(EDI, (DWORD*)0x6a9ec0);
+        mov(EDI, PEDI + 0x768);
+        mov(EDI, PEDI + 0x160);
+        push(col - 1);
+        push(type);
+        mov(EBX, row - 1);
+        mov(EAX, 0x42a660).add_word(0xd0ff); // call 0x42a660
+        return *this;
+    }
 
     #ifndef SCRIPT_DLL
     /*调整行*/

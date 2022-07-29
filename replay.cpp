@@ -12,12 +12,14 @@ using namespace chrono;
 void ClearRndJmp();
 void InjectRndRec();
 void InjectRecEnd();
+void Inject1400Sun();
 void ChangeSpeed();
 extern HWND hSpeedText;
 
 extern PVOID pCode, pCode2, pData;
-extern PVOID pCodeRestart, pCodeCard;
+extern PVOID pCodeRestart, pCodeCard, pCode1400Sun;
 extern PVOID pDataCard, pDataMjClock;
+static bool b1400Sun;
 
 bool LoadRec(HWND hWnd) {
     OPENFILENAME ofn = {};
@@ -42,6 +44,7 @@ bool LoadRec(HWND hWnd) {
         MessageBox(hWnd, "录像文件版本过高，无法识别", "读取失败", MB_ICONERROR);
         return false;
     }
+    fin.read((char*)&b1400Sun, sizeof(b1400Sun)); // 是否1400开
     int len; char* data;
     fin.read((char*)&len, sizeof(len)); // 随机数载入
     pData = AllocMemory(len + 5);
@@ -187,6 +190,7 @@ BOOL CALLBACK RepDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
 
         InjectRndRec();
         InjectCardRep();
+        Inject1400Sun();
         InjectRepStart();
         std::thread(ChangeSpeed).detach();
 
@@ -210,6 +214,7 @@ BOOL CALLBACK RepDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
             FreeMemory(pCode2);
             FreeMemory(pCodeRestart);
             FreeMemory(pCodeCard);
+            if(b1400Sun) FreeMemory(pCode1400Sun);
             FreeMemory(pData);
             FreeMemory(pDataCard);
             FreeMemory(pDataMjClock);

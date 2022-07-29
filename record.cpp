@@ -9,9 +9,10 @@ void ChangeSpeed();
 HWND hSpeedText;
 
 extern PVOID pCode, pCode2, pData;
-PVOID pCodeRestart, pCodeCard, pCodeMjClock;
+PVOID pCodeRestart, pCodeCard, pCodeMjClock, pCode1400Sun;
 PVOID pDataCard, pDataMjClock;
 PVOID pData0, pDataCard0, pDataMjClock0; // 过完一关后的缓存区
+extern bool b1400Sun;
 static int th_cnt = 0, th_fast = 0;
 static const int len_data = 2048 * 1024; // 2M
 
@@ -30,6 +31,7 @@ void SaveRec() {
     std::ofstream fout(fn, ios::binary);
     DWORD version = REPVERSION; // 版本
     fout.write((const char*)&version, sizeof(version));
+    fout.write((const char*)&b1400Sun, sizeof(b1400Sun)); // 是否1400开
     int len = read_memory<int>(0x700028); // 缓存的随机数
     char* data = new char[len];
     ReadProcessMemory(hGameProcess, pData0, data, len, NULL);
@@ -183,11 +185,56 @@ void InjectRecStart() {
     Asm.write(pCodeRestart);
     write_call<1>(pCodeRestart, 0x407b57);
 }
+void Inject1400Sun() {
+    INJECTOR Asm;
+    // 注入：使用1400开局
+    Asm.add_byte(0xb8).add_dword(0x5) // original code
+        .push(EAX).push(EBX).push(ECX).push(EDX).push(ESI).push(EDI)
+        .cmp((BYTE*)0x70001c, 0)
+        .if_jmp(ABOVE, INJECTOR()
+            .mov(ESI, (DWORD*)0x6a9ec0)
+            .mov(ESI, PESI + 0x768)
+            .mov(ESI, PESI + 0x5568)
+            .cmp(ESI, 0ul)
+            .if_jmp(EQUAL, INJECTOR()
+                .new_plant(1, 1, m_p["h"])
+                .new_plant(1, 2, m_p["h"])
+                .new_plant(1, 5, m_p["h"])
+                .new_plant(2, 1, m_p["h"])
+                .new_plant(3, 2, m_p["h"])
+                .new_plant(4, 2, m_p["h"])
+                .new_plant(5, 1, m_p["h"])
+                .new_plant(5, 2, m_p["h"])
+                .new_plant(1, 4, m_p["j"])
+                .new_plant(3, 3, m_p["l"])
+                .new_plant(4, 3, m_p["l"])
+                .new_plant(4, 4, m_p["l"])
+                .new_plant(3, 4, m_p["2"])
+                .new_plant(2, 4, m_p["y"])
+                .new_plant(4, 5, m_p["y"])
+                .new_plant(5, 4, m_p["y"])
+                .new_plant(5, 3, m_p["3"])
+                .new_plant(2, 5, m_p["b"])
+                .new_plant(3, 5, m_p["b"])
+                .new_plant(5, 5, m_p["b"])
+                .new_plant(4, 1, m_p["s"])
+                .new_plant(3, 1, m_p["c"])
+                .new_plant(1, 3, m_p["_"])
+                .new_plant(2, 2, m_p["_"])
+                .new_plant(2, 3, m_p["_"])
+                .mov(EDI, 0x42b277).add_word(0xe7ff))) // jmp 0x42b277
+        .pop(EDI).pop(ESI).pop(EDX).pop(ECX).pop(EBX).pop(EAX);
+
+    pCode1400Sun = AllocMemory(Asm.len() + 1);
+    Asm.write(pCode1400Sun);
+    write_call<0>(pCode1400Sun, 0x42af46);
+}
 void InjectRecEnd() {
     write_code({0x8b, 0x85, 0x60, 0x01, 0x00, 0x00}, 0x40fdcf);
     write_code({0x64, 0xa1, 0x00, 0x00, 0x00, 0x00}, 0x407b57);
     write_code({0x64, 0x89, 0x0d, 0x00, 0x00, 0x00, 0x00}, 0x41606f);
     write_code({0xc3, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc}, 0x40dfb0);
+    write_code({0xb8, 0x05, 0x00, 0x00, 0x00}, 0x42af46);
 }
 BOOL CALLBACK RecDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
@@ -203,6 +250,7 @@ BOOL CALLBACK RecDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
         InjectRndRec();
         InjectCardRec();
         InjectMjClockRec();
+        if(b1400Sun) Inject1400Sun();
         InjectRecStart();
         std::thread([] {
             const int cnt = ++th_cnt;
@@ -232,6 +280,7 @@ BOOL CALLBACK RecDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
             FreeMemory(pCodeRestart);
             FreeMemory(pCodeCard);
             FreeMemory(pCodeMjClock);
+            if(b1400Sun) FreeMemory(pCode1400Sun);
             FreeMemory(pData);
             FreeMemory(pData0);
             FreeMemory(pDataCard);

@@ -50,6 +50,7 @@
 #define IDM_RECORD			919
 #define IDM_REPLAY			920
 #define IDM_COLLECTOR		921
+#define IDM_1400SUN			922
 
 #define IDR_CODE			1001
 #define IDR_CODE5			1002
