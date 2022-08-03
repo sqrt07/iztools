@@ -49,6 +49,14 @@ void write_call(void* func, int ptr) {
     *(int*)&code[1] = (int)func - ptr - 5;
     WriteProcessMemory(hGameProcess, (void*)ptr, code, sizeof(code), NULL);
 }
+template <int NOP = 0>
+void write_jmp(void* func, int ptr) {
+    BYTE code[NOP + 5];
+    memset(code, 0x90, sizeof(code));
+    code[0] = 0xe9;
+    *(int*)&code[1] = (int)func - ptr - 5;
+    WriteProcessMemory(hGameProcess, (void*)ptr, code, sizeof(code), NULL);
+}
 
 inline void write_code(const std::initializer_list<BYTE>& code, int ptr) {
     WriteProcessMemory(hGameProcess, (void*)ptr, code.begin(), code.size(), NULL);

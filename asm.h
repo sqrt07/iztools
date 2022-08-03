@@ -306,9 +306,18 @@ class INJECTOR {
     }
     // row和col从1开始；type使用Plant("xx")
     INJECTOR& new_plant(int row, int col, int type) {
+        push(EAX).push(EBX).push(ECX).push(EDX).push(ESI).push(EDI);
+
         mov(EDI, (DWORD*)0x6a9ec0);
         mov(EDI, PEDI + 0x768);
         mov(EDI, PEDI + 0x160);
+        _new_plant(row, col, type);
+
+        pop(EDI).pop(ESI).pop(EDX).pop(ECX).pop(EBX).pop(EAX);
+        return *this;
+    }
+
+    INJECTOR& _new_plant(int row, int col, int type) {
         push(col - 1);
         push(type);
         mov(EBX, row - 1);

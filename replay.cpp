@@ -1,7 +1,8 @@
 /*
 1. 屏蔽操作（不着急）
-2. 速度条、进度条（暂缓）
+2. 进度条（暂缓）
 3. 僵尸Rank（不重要）
+4. 1400开植物栈位随机
 */
 
 #include "iztools.h"
@@ -190,7 +191,7 @@ BOOL CALLBACK RepDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
 
         InjectRndRec();
         InjectCardRep();
-        Inject1400Sun();
+        if(b1400Sun) Inject1400Sun();
         InjectRepStart();
         std::thread(ChangeSpeed).detach();
 
