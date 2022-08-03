@@ -53,5 +53,5 @@ void FreeMemory(void*& p);
 extern LPCSTR str_help, str_help5, str_char, str_about;
 extern LPCSTR str_record, str_replay, str_1400warning;
 
-#define VERSION "v1.5.4"
-#define REPVERSION 0x154
+#define VERSION "v1.5.5"
+#define REPVERSION 0x155
