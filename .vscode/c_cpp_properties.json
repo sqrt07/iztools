@@ -9,7 +9,7 @@
                 "_DEBUG"
             ],
             "windowsSdkVersion": "10.0.18362.0",
-            "compilerPath": "D:/MinGW/bin/g++.exe",
+            "compilerPath": "D:/ProgramFiles/MinGW/bin/g++.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "windows-gcc-x86",
