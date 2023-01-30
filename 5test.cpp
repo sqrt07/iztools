@@ -9,7 +9,7 @@ extern int start_time;
 extern bool bSpeed, bHalfSpeed, bNoInject, bDLL, bDelay460;
 bool bDLLSuccess;
 
-PVOID pData, pCode, pCode2;
+PVOID pData, pCode, pCode2, pCode3;
 
 Args args;
 HMODULE hDLL;
@@ -171,21 +171,29 @@ inline initializer_list<DWORD> jmp_list = {
     0x407eef, 0x407efb, 0x407f0e,
     0x40dabb
 };
-void WriteRndJmp(DWORD pjmp) {
+inline initializer_list<DWORD> jmp_list_f2 = { // 5af410
+    0x460590,  // 胆小冒头动画
+    // 0x4605d3,
+};
+void WriteRndJmp(DWORD pjmp, DWORD pjmp3) {
     for(DWORD ptr : jmp_list_f)
         write_memory<DWORD>(pjmp - ptr - 5, ptr + 1);
     for(DWORD ptr : jmp_list)
         write_memory<DWORD>(pjmp - ptr, ptr + 1);
+    for(DWORD ptr : jmp_list_f2)
+        write_memory<DWORD>(pjmp3 - ptr - 5, ptr + 1);
 }
 void ClearRndJmp() {
     for(DWORD ptr : jmp_list_f)
         write_memory(0x511cb0 - ptr - 5, ptr + 1);
     for(DWORD ptr : jmp_list)
         write_memory(0x5af400 - ptr - 5, ptr + 1);
+    for(DWORD ptr : jmp_list_f2)
+        write_memory(0x5af410 - ptr - 5, ptr + 1);
 }
 
 void InjectRndRec() {
-    INJECTOR Asm, Asm2;
+    INJECTOR Asm, Asm2, Asm3;
     // rnd_float
     Asm.add_word(0x058f).add_dword(0x6ffffc) // pop [6ffffc]
         .mov((DWORD*)0x700018, EDI)
@@ -233,18 +241,48 @@ void InjectRndRec() {
                            .mov((DWORD*)0x700020, EDI))
         .mov(EDI, (DWORD*)0x700018);
 
+    // rnd_float_2
+    Asm3.add_word(0x058f).add_dword(0x6ffffc) // pop [6ffffc] // 剥掉call过来压栈的地址
+        .mov((DWORD*)0x700018, EDI)
+        .call(0x5af410) // r_rnd_f__
+        .add_word(0x35ff).add_dword(0x6ffffc) // push [6ffffc] // 还原，供ret用
+        .cmp((BYTE*)0x70001c, 1)
+        .if_jmp(EQUAL, INJECTOR() // 记录
+                           .mov(EDI, (DWORD*)0x700014)
+                           .add_word(0x17d9) // fst [edi]
+                           .add(EDI, 4)
+                           .mov((DWORD*)0x700014, EDI))
+        .cmp((BYTE*)0x70001c, 2)
+        .if_jmp(EQUAL, INJECTOR() // 重现
+                           .mov(EDI, (DWORD*)0x700020)
+                           .cmp(EDI, (DWORD*)0x700014)
+                           .if_jmp(EQUAL, INJECTOR()
+                                .mov((BYTE*)0x70004c, (BYTE)TEXTTYPE::END)
+                                .mov((BYTE*)0x70001c, 0))
+                           .if_jmp(BELOW, INJECTOR()
+                                .add_word(0xd8dd) // fstp st(0)
+                                .add_word(0x07d9)) // fld [edi]
+                           .add(EDI, 4)
+                           .mov((DWORD*)0x700020, EDI))
+        .mov(EDI, (DWORD*)0x700018);
+
     pCode = AllocMemory(Asm.len() + 1);
     pCode2 = AllocMemory(Asm2.len() + 1);
+    pCode3 = AllocMemory(Asm3.len() + 1);
     Asm.write(pCode);
     Asm2.write(pCode2);
+    Asm3.write(pCode3);
 
-    const DWORD pjmp = 0x401872;
+    const DWORD pjmp = 0x401872, pjmp3 = 0x401961;
     Asm.clear();
+    Asm3.clear();
     Asm.add_byte(0xe9).add_dword((DWORD)pCode - pjmp - 5);
     Asm.add_byte(0xe9).add_dword((DWORD)pCode2 - pjmp - 10);
+    Asm3.add_byte(0xe9).add_dword((DWORD)pCode3 - pjmp3 - 5);
     Asm.write((void*)pjmp);
+    Asm3.write((void*)pjmp3);
 
-    WriteRndJmp(pjmp);
+    WriteRndJmp(pjmp, pjmp3);
 }
 
 bool Start5Test() {

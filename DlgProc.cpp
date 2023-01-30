@@ -5,7 +5,7 @@ void ClearRndJmp();
 
 extern int start_time;
 extern bool b5Test, bDLLSuccess;
-extern PVOID pCode, pCode2, pData;
+extern PVOID pCode, pCode2, pCode3, pData;
 HWND hResText, hTimeText;
 HWND hReplay[3], hBtnReplay, hBtnSave, hBtnLoad;
 static int test_cnt = 0;
@@ -118,6 +118,7 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) {
                 ClearRndJmp();
                 FreeMemory(pCode);
                 FreeMemory(pCode2);
+                FreeMemory(pCode3);
                 FreeMemory(pData);
             }
             break;

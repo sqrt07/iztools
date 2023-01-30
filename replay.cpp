@@ -17,7 +17,7 @@ void Inject1400Sun();
 void ChangeSpeed();
 extern HWND hSpeedText;
 
-extern PVOID pCode, pCode2, pData;
+extern PVOID pCode, pCode2, pCode3, pData;
 extern PVOID pCodeRestart, pCodeCard, pCode1400Sun;
 extern PVOID pDataCard, pDataMjClock;
 static bool b1400Sun;
@@ -213,6 +213,7 @@ BOOL CALLBACK RepDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
             ClearRndJmp();
             FreeMemory(pCode);
             FreeMemory(pCode2);
+            FreeMemory(pCode3);
             FreeMemory(pCodeRestart);
             FreeMemory(pCodeCard);
             if(b1400Sun) FreeMemory(pCode1400Sun);

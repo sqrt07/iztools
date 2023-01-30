@@ -8,7 +8,7 @@ void InjectRndRec();
 void ChangeSpeed();
 HWND hSpeedText;
 
-extern PVOID pCode, pCode2, pData;
+extern PVOID pCode, pCode2, pCode3, pData;
 PVOID pCodeRestart, pCodeCard, pCodeMjClock, pCode1400Sun;
 PVOID pDataCard, pDataMjClock;
 PVOID pData0, pDataCard0, pDataMjClock0; // 过完一关后的缓存区
@@ -284,6 +284,7 @@ BOOL CALLBACK RecDlgProc(HWND hDlg, UINT Message, WPARAM wParam, LPARAM lParam) 
             ClearRndJmp();
             FreeMemory(pCode);
             FreeMemory(pCode2);
+            FreeMemory(pCode3);
             FreeMemory(pCodeRestart);
             FreeMemory(pCodeCard);
             FreeMemory(pCodeMjClock);
